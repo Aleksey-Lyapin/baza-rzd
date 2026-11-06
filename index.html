@@ -251,7 +251,7 @@ table.dx.fix tr.dxm td:first-child{background:#EEF4FA} table.dx.fix tr.dxm.own t
 .dx-lead{font-size:13.5px;color:var(--ink2);max-width:1180px;margin:0}
 .dx-lead b{color:var(--ink)}
 .dx-blk .chip{font-size:14px;font-weight:600;padding:9px 22px}
-.dx-cw{align-items:center}
+.dx-cw,#p-grp{align-items:center}
 .dd{position:relative}
 .dd>summary{list-style:none;display:inline-flex;align-items:center;gap:8px}
 .dd>summary::-webkit-details-marker{display:none}
@@ -761,6 +761,13 @@ const PD = [
 ].map(([c,l,v])=>({c,l,v:v.split("|")}));
 
 const compIdx = () => PJ.map((p,i)=>i).filter(i=>i>0 && !DROP_PROJ.includes(PJ[i].s) && (S.pgrp==="all" || PJ[i].g===S.pgrp));
+/* фильтр конкурентов на вкладке «Продукт» (как на «Сделках и экспозиции») */
+const P_MAIN = ["Тихий центр","Гор. легенды","На Некрасова","Атлас Люксо","Нагорный","Никольский"];
+const pFull = s => s==="Гор. легенды" ? "Городские легенды" : s;
+const pAll = () => PJ.map((p,i)=>i).filter(i=>i>0 && !DROP_PROJ.includes(PJ[i].s));
+const pSelNames = () => { const all = pAll().map(i=>PJ[i].s); const v = Array.isArray(S.pcomp) ? S.pcomp.filter(n=>all.includes(n)) : []; return v.length ? v : all; };
+const pIdx = () => { const n = pSelNames(); return pAll().filter(i=>n.includes(PJ[i].s)); };
+let P_DD_OPEN = false;
 const score = c => c==="Y"?1 : c==="P"?0.5 : c==="N"?0 : null;
 function featStat(f, idx){
   if(f.k==="t") return {st:f.st, note:f.nt, yes:null, known:null};
@@ -792,12 +799,14 @@ function mark(v, own){
 const soft = s => s.replace(/Предчистовая/g,"Пред­чисто­вая").replace(/премиальный/g,"преми­аль­ный").replace(/межквартирные/g,"меж­квар­тирные").replace(/подземно-надземный/g,"подземно-над­земный").replace(/ближайший/g,"ближай­ший");
 const fmtCnt = (yes,known) => known ? `${nf1.format(yes).replace(",0","")} из ${known}` : "";
 function renderProduct(){
-  const idx = compIdx();
+  const idx = pIdx(), nAll = pAll().length, selP = pSelNames(), pIsAll = idx.length===nAll, pIsMain = selP.length===P_MAIN.length && P_MAIN.every(n=>selP.includes(n));
   const cats = PCATS.filter(([c])=>S.pcat==="all"||S.pcat===c);
   document.getElementById("p-cat").innerHTML = [["all","Все"],...PCATS].map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${S.pcat===v}">${l}</button>`).join("");
-  document.getElementById("p-grp").innerHTML = [["all","Все 11"],["loc","Локальные (5)"],["cls","По классу и цене (6)"]].map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${S.pgrp===v}">${l}</button>`).join("");
+  const pLbl = pIsAll ? "Выбрать конкурентов" : selP.length<=2 ? selP.map(pFull).join(", ") : `Выбрано: ${selP.length} из ${nAll}`;
+  document.getElementById("p-grp").innerHTML = `<button class="chip" data-v="all" aria-pressed="${pIsAll}">Все (${nAll})</button><button class="chip" data-v="main" aria-pressed="${pIsMain}">Основные конкуренты (${P_MAIN.length})</button><details class="dd" id="p-dd"${P_DD_OPEN ? " open" : ""}><summary class="chip dd-btn"${!pIsAll && !pIsMain ? ' aria-pressed="true"' : ""}>${pLbl}</summary><div class="dd-menu">${pAll().map(i=>PJ[i].s).map(s=>`<label class="dd-it"><input type="checkbox" data-p="${s}"${selP.includes(s) ? " checked" : ""}><span>${pFull(s)}</span>${P_MAIN.includes(s) ? `<small>основной</small>` : ""}</label>`).join("")}</div></details>`;
+  { const d = document.getElementById("p-dd"); d.addEventListener("toggle", ()=>{ P_DD_OPEN = d.open; }); }
   document.querySelectorAll("#p-diff .chip").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===S.pdiff));
-  const grpTxt = S.pgrp==="loc" ? "локальными конкурентами" : S.pgrp==="cls" ? "конкурентами по классу и цене" : "11 конкурентами";
+  const grpTxt = pIsAll ? `${nAll} конкурентами` : pIsMain ? `основными конкурентами (${selP.length})` : `${selP.length} ${selP.length===1 ? "конкурентом" : "конкурентами"}: ${selP.map(pFull).join(", ")}`;
   document.getElementById("p-sub").textContent = `Сравнение с ${grpTxt} · статус — по доле конкурентов, у которых есть опция: «Сильнее рынка» — у нас есть, а у трети конкурентов и меньше; «Уступаем» — у нас нет, а у половины и больше`;
   const rows = PF.map(f=>({f, s:featStat(f, idx)}));
   /* summary */
@@ -831,7 +840,7 @@ function renderProduct(){
     ["Бризеры и очистка воды","Бризеры / вентиляция с очисткой","Многоступенчатая очистка воды"],["Собственная УК"],["Комплексная застройка"]];
   const impLi = IMP.map(g=>{ const labs = g.length>1 ? g.slice(1) : g; const rs = labs.map(l=>rows.find(x=>x.f.l===l)).filter(Boolean);
     if(rs.length===1 && rs[0].f.k==="t"){ /* текстовая строка (паркинг): считаем конкурентов с подземным паркингом */
-      const f = rs[0].f, ids = compIdx(), has = ids.filter(i=>!/^н\/д|^Многоуровн|, наземный$/.test(f.v[i].t)).length;
+      const f = rs[0].f, ids = idx, has = ids.filter(i=>!/^н\/д|^Многоуровн|, наземный$/.test(f.v[i].t)).length;
       return `<li><b>${g[0]}</b> — ${esc(`у нас: ${f.v[0].t}; у конкурентов — ${has} из ${ids.length}`)}</li>`; }
     if(!rs.length || !rs.every(r=>r.f.v[0].c==="Y"||r.f.v[0].c==="P")) return "";
     const cnts = rs.map(r=>r.s.yes), kn = rs[0].s.known, lo = Math.min(...cnts), hi = Math.max(...cnts);
@@ -1031,7 +1040,11 @@ document.getElementById("summary-view").addEventListener("click",e=>{ const b=e.
 document.getElementById("s-grp").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.pgrp=b.dataset.v; save(); render(); });
 document.getElementById("s-tool").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.stool=b.dataset.v; save(); render(); });
 document.getElementById("p-cat").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.pcat=b.dataset.v; save(); render(); });
-document.getElementById("p-grp").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.pgrp=b.dataset.v; save(); render(); });
+const reP = () => { const y = window.scrollY; save(); render(); window.scrollTo(0, y); };
+document.getElementById("p-grp").addEventListener("click",e=>{ const b=e.target.closest("button.chip[data-v]"); if(!b) return; S.pcomp = b.dataset.v==="main" ? [...P_MAIN] : []; P_DD_OPEN = false; reP(); });
+document.getElementById("p-grp").addEventListener("change",e=>{ const c=e.target.closest("input[data-p]"); if(!c) return; const sel = pSelNames(), n = c.dataset.p;
+  const cur = c.checked ? [...sel, n] : sel.filter(x=>x!==n); if(!cur.length){ c.checked = true; return; }
+  S.pcomp = cur.length===pAll().length ? [] : cur; P_DD_OPEN = true; reP(); });
 document.getElementById("p-diff").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.pdiff=b.dataset.v; save(); render(); });
 document.getElementById("p-vs").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.pvs=+b.dataset.v; save(); render(); });
 document.getElementById("tab-price").addEventListener("click",()=>{ S.view = S.pview || "rooms"; save(); render(); });
@@ -1181,8 +1194,8 @@ const dxSelNames = () => { const all = DXP.map(p=>p.s); const v = Array.isArray(
 const dxSel = () => { const n = dxSelNames(); return n.length===DXP.length ? null : new Set(DXP.map((p,i)=>n.includes(p.s)?i:-1).filter(i=>i>=0)); };
 const comps = n => n%10===1&&n%100!==11 ? "конкурента" : "конкурентов";
 let DX_DD_OPEN = false;
-document.addEventListener("click", e=>{ const d = document.getElementById("dx-dd"); if(d && d.open && !d.contains(e.target)){ d.open = false; DX_DD_OPEN = false; } });
-document.addEventListener("keydown", e=>{ const d = document.getElementById("dx-dd"); if(e.key==="Escape" && d && d.open){ d.open = false; DX_DD_OPEN = false; } });
+document.addEventListener("click", e=>{ document.querySelectorAll("details.dd[open]").forEach(d=>{ if(!d.contains(e.target)){ d.open = false; if(d.id==="dx-dd") DX_DD_OPEN = false; else P_DD_OPEN = false; } }); });
+document.addEventListener("keydown", e=>{ if(e.key!=="Escape") return; document.querySelectorAll("details.dd[open]").forEach(d=>{ d.open = false; if(d.id==="dx-dd") DX_DD_OPEN = false; else P_DD_OPEN = false; }); });
 const DCH = [];
 const dxBase = (extra={}) => ({ responsive:true, maintainAspectRatio:false, animation:false, devicePixelRatio:Math.max(2, window.devicePixelRatio||1), ...extra });
 const dxDraw = (id, cfg) => { const cv = document.getElementById(id); if(cv) DCH.push(new Chart(cv, cfg)); };
