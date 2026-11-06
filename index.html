@@ -1,5 +1,6 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>БАЗА-РЖД</title><meta name="robots" content="noindex,nofollow">
+<title>БАЗА-РЖД</title>
+<meta name="robots" content="noindex,nofollow">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -250,6 +251,17 @@ table.dx.fix tr.dxm td:first-child{background:#EEF4FA} table.dx.fix tr.dxm.own t
 .dx-lead{font-size:13.5px;color:var(--ink2);max-width:1180px;margin:0}
 .dx-lead b{color:var(--ink)}
 .dx-blk .chip{font-size:14px;font-weight:600;padding:9px 22px}
+.dx-cw{align-items:center}
+.dd{position:relative}
+.dd>summary{list-style:none;display:inline-flex;align-items:center;gap:8px}
+.dd>summary::-webkit-details-marker{display:none}
+.dd>summary::after{content:"";width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg)}
+.dd[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
+.dd-menu{position:absolute;z-index:15;top:calc(100% + 6px);left:0;min-width:250px;max-height:min(420px,70vh);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,35,70,.16);padding:6px;display:flex;flex-direction:column}
+.dd-it{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--ink);cursor:pointer;white-space:nowrap}
+.dd-it:hover{background:var(--bg)}
+.dd-it input{width:16px;height:16px;margin:0;accent-color:var(--ink);flex:none;cursor:pointer}
+.dd-it small{margin-left:auto;padding-left:12px;font-size:11px;color:var(--muted);font-weight:500}
 </style>
 
 <header class="top">
@@ -1168,6 +1180,9 @@ const DX_MAIN = ["Тихий центр","Городские легенды","Н
 const dxSelNames = () => { const all = DXP.map(p=>p.s); const v = Array.isArray(S.dcomp) ? S.dcomp.filter(n=>all.includes(n)) : []; return v.length ? v : all; };
 const dxSel = () => { const n = dxSelNames(); return n.length===DXP.length ? null : new Set(DXP.map((p,i)=>n.includes(p.s)?i:-1).filter(i=>i>=0)); };
 const comps = n => n%10===1&&n%100!==11 ? "конкурента" : "конкурентов";
+let DX_DD_OPEN = false;
+document.addEventListener("click", e=>{ const d = document.getElementById("dx-dd"); if(d && d.open && !d.contains(e.target)){ d.open = false; DX_DD_OPEN = false; } });
+document.addEventListener("keydown", e=>{ const d = document.getElementById("dx-dd"); if(e.key==="Escape" && d && d.open){ d.open = false; DX_DD_OPEN = false; } });
 const DCH = [];
 const dxBase = (extra={}) => ({ responsive:true, maintainAspectRatio:false, animation:false, devicePixelRatio:Math.max(2, window.devicePixelRatio||1), ...extra });
 const dxDraw = (id, cfg) => { const cv = document.getElementById(id); if(cv) DCH.push(new Chart(cv, cfg)); };
@@ -1181,6 +1196,7 @@ function renderDeals(){
   const C = dxCalc(dxSel()), CA = dxCalc(), F = dxFacts(C), P = C.pr, root = document.getElementById("deals-view");
   const nP = P.length, nPt = `${nP} ${comps(nP)}`, isAll = nP===DXP.length;
   const selN = dxSelNames(), isMain = selN.length===DX_MAIN.length && DX_MAIN.every(n=>selN.includes(n));
+  const ddLbl = isAll ? "Выбрать конкурентов" : selN.length<=2 ? selN.join(", ") : `Выбрано: ${selN.length} из ${DXP.length}`;
   const bNames = P.filter(p=>p.c==="b").map(p=>p.s), cNames = P.filter(p=>p.c==="c").map(p=>p.s);
   const dynSub = `Бизнес — ${bNames.length} ${bNames.length===1?"проект":bNames.length<5&&bNames.length>1?"проекта":"проектов"}, комфорт — ${cNames.length?cNames.join(", "):"нет в выборке"}${cNames.includes("Тетро")?". Низкая цена комфорта в январе — массовые продажи Тетро по стартовым ценам":""}`;
   const ink = css("--ink"), ink2 = css("--ink2"), muted = css("--muted"), grid = css("--line"), own = css("--own"), navy = css("--med-deal"), expo = css("--expo"), deal = css("--deal");
@@ -1324,8 +1340,8 @@ function renderDeals(){
   root.innerHTML = `
   <section class="filters" aria-label="Блоки отчёта">
     <div class="ctl">Блок <span class="chips dx-blk" id="dx-blk"><button class="chip" data-v="d" aria-pressed="${blk==="d"}">Сделки</button><button class="chip" data-v="e" aria-pressed="${blk==="e"}">Экспозиция</button></span></div>
-    <div class="ctl">Конкуренты <span class="chips" id="dx-comp"><button class="chip" data-g="all" aria-pressed="${isAll}">Все (${DXP.length})</button><button class="chip" data-g="main" aria-pressed="${isMain}">Основные конкуренты (${DX_MAIN.length})</button></span>
-      <span class="chips" id="dx-comp-p">${DXP.map(p=>`<button class="chip" data-p="${p.s}" aria-pressed="${!isAll && selN.includes(p.s)}">${p.s}</button>`).join("")}</span></div>
+    <div class="ctl">Конкуренты <span class="chips dx-cw"><span class="chips" id="dx-comp"><button class="chip" data-g="all" aria-pressed="${isAll}">Все (${DXP.length})</button><button class="chip" data-g="main" aria-pressed="${isMain}">Основные конкуренты (${DX_MAIN.length})</button></span>
+      <details class="dd" id="dx-dd"${DX_DD_OPEN ? " open" : ""}><summary class="chip dd-btn"${!isAll && !isMain ? ' aria-pressed="true"' : ""}>${ddLbl}</summary><div class="dd-menu" id="dx-comp-p">${DXP.map(p=>`<label class="dd-it"><input type="checkbox" data-p="${p.s}"${selN.includes(p.s) ? " checked" : ""}><span>${p.s}</span>${DX_MAIN.includes(p.s) ? `<small>основной</small>` : ""}</label>`).join("")}</div></details></span></div>
     <div class="ctl">Перейти к разделу <span class="chips" id="dx-nav">${navs.map(([id,l])=>`<button class="chip" data-t="${id}">${l}</button>`).join("")}</span></div>
     <div class="src">${blk==="d" ? `Сделки — лоты «продано» с датой договора янв–сен 2026; ${nPt}` : `Экспозиция — лоты «в продаже» на ${DX.asOf}; ${nPt}; БАЗА-РЖД — прайс, цена с макс. скидкой`}</div>
   </section>
@@ -1395,8 +1411,10 @@ function renderDeals(){
 
   const reDx = () => { const y = window.scrollY; save(); render(); window.scrollTo(0, y); };
   root.querySelector("#dx-comp").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; S.dcomp = b.dataset.g==="main" ? [...DX_MAIN] : []; reDx(); });
-  root.querySelector("#dx-comp-p").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const n = b.dataset.p;
-    let cur = isAll ? [] : [...selN]; cur = cur.includes(n) ? cur.filter(x=>x!==n) : [...cur, n]; S.dcomp = cur; reDx(); });
+  const dd = root.querySelector("#dx-dd"); dd.addEventListener("toggle", ()=>{ DX_DD_OPEN = dd.open; });
+  root.querySelector("#dx-comp-p").addEventListener("change", e=>{ const c = e.target.closest("input[data-p]"); if(!c) return; const n = c.dataset.p;
+    const cur = c.checked ? [...selN, n] : selN.filter(x=>x!==n); if(!cur.length){ c.checked = true; return; }
+    S.dcomp = cur.length===DXP.length ? [] : cur; DX_DD_OPEN = true; reDx(); });
   root.querySelector("#dx-nav").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const t = document.getElementById(b.dataset.t); if(t) t.closest(".slide").scrollIntoView({behavior:"smooth", block:"start"}); });
   root.querySelector("#dx-blk").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b || b.dataset.v===blk) return; S.dblk = b.dataset.v; save(); render(); document.getElementById("deals-view").scrollIntoView({block:"start"}); window.scrollTo(0,0); });
   const mf = root.querySelector("#dx-mon-f"); if(mf) mf.addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const y = window.scrollY; S.dmon = b.dataset.v; save(); render(); window.scrollTo(0, y); });
