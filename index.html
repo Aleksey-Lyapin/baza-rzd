@@ -357,7 +357,7 @@ table.dx.fix tr.dxm td:first-child{background:#EEF4FA} table.dx.fix tr.dxm.own t
   <section class="slide">
     <div class="sh"><div><h2 id="sum-title">Насколько мы дороже или дешевле рынка</h2><div class="dt" id="sum-sub"></div></div></div>
     <div class="tbl"><table id="sum"></table></div>
-    <div class="foot" style="margin-top:0">Строка ведёт к графику. Отклонение — цена м² БАЗА-РЖД к медиане конкурентов: синим — мы дешевле, красным — дороже.</div>
+    <div class="foot" style="margin-top:0"><div>Строка ведёт к графику. Отклонение — цена м² БАЗА-РЖД к медиане конкурентов: синим — мы дешевле, красным — дороже.</div><div id="sum-period"></div></div>
   </section>
 
   <section class="grid-charts" id="charts" aria-label="Графики по группам"></section>
@@ -612,6 +612,7 @@ function render(){
   /* summary table */
   document.getElementById("sum-title").textContent = S.view==="rooms" ? "Насколько мы дороже или дешевле рынка — по комнатности" : "Насколько мы дороже или дешевле рынка — по площади с шагом 5 м²";
   document.getElementById("sum-sub").textContent = `Цена м², ₽ · ${modeTxt} · ${rTxt}`;
+  document.getElementById("sum-period").innerHTML = `<b>Период:</b> сделки конкурентов — за ${f0(DATA.period.months)} мес., 01.05–${DATA.period.to}; экспозиция — на 10.11.2026; БАЗА-РЖД — текущий прайс.`;
   const head = `<thead><tr><th>${S.view==="rooms"?"Тип":"Тип и площадь"}</th><th>Лотов РЖД</th><th>БАЗА-РЖД, ₽/м²</th><th>Ср. бюджет РЖД, млн</th><th>Ср. площадь РЖД, м²</th><th>Медиана экспозиции</th><th>Площадь экспозиции, м²</th><th>РЖД к экспозиции</th><th>Медиана сделок</th><th>Площадь сделок, м²</th><th>РЖД к сделкам</th><th>Сделок</th></tr></thead>`;
   const dev = (o,m) => m==null||o==null ? null : o/m-1;
   const body = shown.map((a,i)=>{ const dE=dev(a.own.ppm,a.medE), dD=dev(a.own.ppm,a.medD);
