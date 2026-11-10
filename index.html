@@ -1071,7 +1071,7 @@ const DX = {"asOf":"10.11.2026","projects":[{"s":"На Некрасова","c":"
 
 /* ---------- tab «Сделки и экспозиция»: лоты листа «Объед. данные (РЖД)» книги 17d36Bj… (DX.lots: [проект, статус 0 продано / 1 в продаже / 2 вымывание / 3 резерв, комнаты, площадь, цена, месяц договора от янв. 2018, ипотека]); история экспозиции, условия продаж и качественные оценки — из отчёта «РЖД_аналитика_19.10.2026» ---------- */
 const DXP = DX.projects, DXL = DX.lots, DXM0 = (2026-2018)*12;
-const DXMON = ["янв","фев","мар","апр","май","июн","июл","авг","сен"];
+const DXMON = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт"];
 const DXROOMS = [["st","Студии"],["1","1-комн"],["2","2-комн"],["3","3-комн"],["4","4-комн+"]];
 const DXRL = Object.fromEntries(DXROOMS);
 const DXCLS = {b:"бизнес", c:"комфорт"};
@@ -1117,7 +1117,7 @@ function dxCalc(sel){
   const key = sel ? [...sel].sort((a,b)=>a-b).join(",") : "all";
   if(DXCC[key]) return DXCC[key];
   const L = sel ? DXL.filter(l=>sel.has(l[0])) : DXL;
-  const D = L.filter(l=>dxIn(l,0,8)), H1 = D.filter(l=>l[5]<=DXM0+5), Q3 = D.filter(l=>l[5]>=DXM0+6), E = L.filter(l=>l[1]===1);
+  const D = L.filter(l=>dxIn(l,0,DXMON.length-1)), H1 = D.filter(l=>l[5]<=DXM0+5), Q3 = D.filter(l=>l[5]>=DXM0+6 && l[5]<=DXM0+8), E = L.filter(l=>l[1]===1);
   const pr = DXP.map((p,i)=>({p,i})).filter(({i})=>!sel || sel.has(i)).map(({p,i})=>{
     const all = L.filter(l=>l[0]===i), d = D.filter(l=>l[0]===i), e = E.filter(l=>l[0]===i);
     const sold = all.filter(l=>l[1]===0).length;
@@ -1174,10 +1174,10 @@ function dxConclusions(C, F){
     `<b>Цена экспозиции конкурентов за 12 месяцев ${H.all[i1]<H.all[i0]?"снизилась":"выросла"} на ${nf1.format(Math.abs(H.all[i1]/H.all[i0]-1)*100)}%</b>: с ${f1(H.all[i0])} тыс. ₽/м² (сентябрь 2025) до ${f1(H.all[i1])} тыс. ₽/м² (сентябрь 2026). Пик декабря 2025 – февраля 2026 (256–261 тыс. ₽/м²) был временным — на фоне ажиотажного спроса перед изменением условий семейной ипотеки; с мая цена стабильна (245–247 тыс. ₽/м²). На ${DX.asOf} — ${f1(C.tE.ppm/1000)} тыс. ₽/м², в бизнес-классе — ${f1(busE.ppm/1000)} тыс. ₽/м².`,
     `<b>В экспозиции на ${DX.asOf} — ${f0(C.tE.n)} ${lots(C.tE.n)}</b>: средняя цена ${f1(C.tE.ppm/1000)} тыс. ₽/м², средняя площадь ${f1(C.tE.area)} м², средний бюджет ${dxM(C.tE.bud)} млн ₽. Разброс цен велик (класс, локация, отделка) — от ${f1(eP[0].E.ppm/1000)} тыс. ₽/м² (${nm(eP[0])}) до ${f1(eP[eP.length-1].E.ppm/1000)} тыс. ₽/м² (${nm(eP[eP.length-1])}).`,
     `<b>Фактическая цена сделок III кв. 2026 в среднем на ${Math.round(Math.abs(C.tQ3.ppm/C.tE.ppm-1)*100)}% ниже цены экспозиции</b> (${f1(C.tQ3.ppm/1000)} против ${f1(C.tE.ppm/1000)} тыс. ₽/м²) — это реальный уровень торга с учётом скидок. ${big.length?`Наибольший разрыв — ${dxList(big.map(p=>`${nm(p)} (${dxP0(F.gap(p))})`))}`:"Разрыв 10% и больше — ни у кого"}${small.length?`; минимальный — ${dxList(small.map(nm))} (до ${dxP0(Math.min(...small.map(F.gap)))})`:""}.`,
-    `<b>За январь–сентябрь 2026 г. совершено ${f0(nD)} ${deals(nD)}</b> (${f0(nD/9)} в месяц) по средней цене ${f1(C.tD.ppm/1000)} тыс. ₽/м², средняя площадь — ${f1(C.tD.area)} м², бюджет — ${dxM(C.tD.bud)} млн ₽. Спрос ${C.tQ3.n/3>=C.tH1.n/6?"ускоряется":"замедляется"}: в III кв. — ${f0(C.tQ3.n/3)} сделки/мес. против ${f0(C.tH1.n/6)} в I полугодии; цена сделки ${C.tQ3.ppm>=C.tH1.ppm?"выросла":"снизилась"} на ${Math.round(Math.abs(C.tQ3.ppm/C.tH1.ppm-1)*100)}% (${f1(C.tQ3.ppm/1000)} против ${f1(C.tH1.ppm/1000)} тыс. ₽/м²).`,
+    `<b>За январь–октябрь 2026 г. совершено ${f0(nD)} ${deals(nD)}</b> (${f0(nD/DXMON.length)} в месяц) по средней цене ${f1(C.tD.ppm/1000)} тыс. ₽/м², средняя площадь — ${f1(C.tD.area)} м², бюджет — ${dxM(C.tD.bud)} млн ₽. Спрос ${C.tQ3.n/3>=C.tH1.n/6?"ускоряется":"замедляется"}: в III кв. — ${f0(C.tQ3.n/3)} сделки/мес. против ${f0(C.tH1.n/6)} в I полугодии; цена сделки ${C.tQ3.ppm>=C.tH1.ppm?"выросла":"снизилась"} на ${Math.round(Math.abs(C.tQ3.ppm/C.tH1.ppm-1)*100)}% (${f1(C.tQ3.ppm/1000)} против ${f1(C.tH1.ppm/1000)} тыс. ₽/м²).`,
     `<b>Основной спрос — 1-комнатные (${dxS0(rS[1].s)}, ${f0(rS[1].n)} шт.) и 2-комнатные (${dxS0(rS[2].s)}, ${f0(rS[2].n)} шт.)</b>; 3-комнатные — ${dxS0(rS[3].s)}, студии — ${dxS0(rS[0].s)}, 4-комнатные и больше — ${dxS0(rS[4].s)}. Самые востребованные бюджеты — ${bS.map(x=>x.b[2]+" млн ₽").join(" и ")} (${bS.map(x=>dxS0(x.s)).join(" и ")} сделок).`,
-    `<b>Лидеры по количеству сделок:</b> ${lead.slice(0,6).map(p=>`${nm(p)} (${p.D.n})`).join(", ")}; в III кв. быстрее всех продают ${dxList(fast.map(p=>`${nm(p)} (${f0(p.Q3.n/3)} сделки/мес.)`))}. ${P.length>=4?`Минимальная активность — ${slow.map(p=>`${nm(p)} (${p.D.n} ${deals(p.D.n)} за 9 месяцев)`).join(" и ")}.`:""}`,
-    `<b>Цена сделки: бизнес-класс — ${f1(B.ppm/1000)} тыс. ₽/м²</b> при ${f1(B.area)} м² (${dxM(B.bud)} млн ₽), ${Cm.n?`комфорт-класс — ${f1(Cm.ppm/1000)} тыс. ₽/м² при ${f1(Cm.area)} м² (${dxM(Cm.bud)} млн ₽)`:"комфорт-класса в выборке нет"}. ${Math.abs(C.tD.m/C.tD.n-0.5)<=0.1?`Около половины сделок — с ипотекой (${dxS0(C.tD.m/C.tD.n)}`:`Доля сделок с ипотекой — ${dxS0(C.tD.m/C.tD.n)} (`}${Math.abs(C.tD.m/C.tD.n-0.5)<=0.1?" ":""}за январь–сентябрь 2026 г.${mC.n?`, в комфорте — ${dxS0(mC.m/mC.n)}`:""}).`,
+    `<b>Лидеры по количеству сделок:</b> ${lead.slice(0,6).map(p=>`${nm(p)} (${p.D.n})`).join(", ")}; в III кв. быстрее всех продают ${dxList(fast.map(p=>`${nm(p)} (${f0(p.Q3.n/3)} сделки/мес.)`))}. ${P.length>=4?`Минимальная активность — ${slow.map(p=>`${nm(p)} (${p.D.n} ${deals(p.D.n)} за 10 месяцев)`).join(" и ")}.`:""}`,
+    `<b>Цена сделки: бизнес-класс — ${f1(B.ppm/1000)} тыс. ₽/м²</b> при ${f1(B.area)} м² (${dxM(B.bud)} млн ₽), ${Cm.n?`комфорт-класс — ${f1(Cm.ppm/1000)} тыс. ₽/м² при ${f1(Cm.area)} м² (${dxM(Cm.bud)} млн ₽)`:"комфорт-класса в выборке нет"}. ${Math.abs(C.tD.m/C.tD.n-0.5)<=0.1?`Около половины сделок — с ипотекой (${dxS0(C.tD.m/C.tD.n)}`:`Доля сделок с ипотекой — ${dxS0(C.tD.m/C.tD.n)} (`}${Math.abs(C.tD.m/C.tD.n-0.5)<=0.1?" ":""}за январь–октябрь 2026 г.${mC.n?`, в комфорте — ${dxS0(mC.m/mC.n)}`:""}).`,
     so.length<4 ? "" : `<b>Распроданность — от ${dxS0(so[0].sold/so[0].tot)} (${nm(so[0])}) и ${dxS0(so[1].sold/so[1].tot)} (${nm(so[1])}) до ${dxS0(so[so.length-2].sold/so[so.length-2].tot)}–${dxS0(so[so.length-1].sold/so[so.length-1].tot)}</b> (${nm(so[so.length-2])}, ${nm(so[so.length-1])}). При темпе III кв. текущей экспозиции хватит примерно на ${f0(F.mktStock)} мес.${over.length?`; затоваривание — у ${dxList(over.map(p=>`${nm(p)} (~${f0(F.stock(p))} мес.)`))}`:""}${def.length?`, дефицит — у ${dxList(def.map(nm))} (~${f0(Math.max(...def.map(F.stock)))} мес. и меньше)`:""}.`,
     `<b>Скидки — у всех конкурентов</b>: 5–20% при 100% оплате или ипотеке без субсидий, обычно на ограниченный пул; максимальные — На Некрасова (до 33%, до 7,7 млн руб. на семейные планировки), Форма (до 5,7 млн руб.), Городские легенды (до 4 млн руб.), Никольский (до 2,5 млн руб.); плюс 5–10% на кладовые и паркинг.`,
     `<b>Ипотека:</b> субсидированные ставки на начальный период — 4,4% на 6–24 мес. (Нагорный, Никольский), ступенчатая от 8,99% (Городские легенды, На Некрасова); IT-ипотека 6% (Форма); траншевая ипотека (Тетро, Тихий центр); ставки «для всех» на весь срок — 13–13,9% (DOM 7, Форма).`,
@@ -1219,8 +1219,8 @@ function renderDeals(){
 
   /* --- KPI --- */
   const kpi = `
-   <div class="tile"><span class="tl">Сделок, янв–сен 2026</span><span class="tv">${f0(C.tD.n)}</span><span class="ts">бизнес ${f0(C.isB(C.D).length)} · комфорт ${f0(C.isC(C.D).length)}</span></div>
-   <div class="tile"><span class="tl">Темп продаж, сделок/мес.</span><span class="tv">${f0(C.tD.n/9)}</span><span class="ts">I п/г — ${f0(C.tH1.n/6)} · III кв. — ${f0(C.tQ3.n/3)}</span></div>
+   <div class="tile"><span class="tl">Сделок, янв–окт 2026</span><span class="tv">${f0(C.tD.n)}</span><span class="ts">бизнес ${f0(C.isB(C.D).length)} · комфорт ${f0(C.isC(C.D).length)}</span></div>
+   <div class="tile"><span class="tl">Темп продаж, сделок/мес.</span><span class="tv">${f0(C.tD.n/DXMON.length)}</span><span class="ts">I п/г — ${f0(C.tH1.n/6)} · III кв. — ${f0(C.tQ3.n/3)}</span></div>
    <div class="tile"><span class="tl">Средняя цена сделки</span><span class="tv">${f1(C.tD.ppm/1000)} <span class="tu">тыс. ₽/м²</span></span><span class="ts">I п/г — ${f1(C.tH1.ppm/1000)} · III кв. — ${f1(C.tQ3.ppm/1000)}</span></div>
    <div class="tile"><span class="tl">Средний бюджет / площадь</span><span class="tv">${dxM(C.tD.bud)} <span class="tu">млн ₽</span></span><span class="ts">${f1(C.tD.area)} м² · ипотека в 2026 г. — ${dxS0(C.tD.m/C.tD.n)}</span></div>`;
 
@@ -1230,7 +1230,7 @@ function renderDeals(){
   const chg = (a,b) => a ? b/a-1 : null;
   const mMet = ["n","area","ppm"].includes(S.dmon) ? S.dmon : "n";
   const mVal = a => !a.n ? "<span style='color:var(--line-strong)'>—</span>" : mMet==="n" ? a.n : mMet==="area" ? f1(a.area) : f0(a.ppm/1000);
-  const t6 = `<table class="dx fix"><thead><tr><th class="l">Проект</th><th class="l">Класс</th>${DXMON.map(m=>`<th>${m} 26</th>`).join("")}<th class="tot">Янв–сен</th></tr></thead><tbody>
+  const t6 = `<table class="dx fix"><thead><tr><th class="l">Проект</th><th class="l">Класс</th>${DXMON.map(m=>`<th>${m} 26</th>`).join("")}<th class="tot">Янв–окт</th></tr></thead><tbody>
     ${ranked.map(p=>`<tr><td class="l ${leaders.has(p.i)?"lead":""}">${p.s}</td><td class="l">${ctag(p.c)}</td>${DXMON.map((_,m)=>`<td>${mVal(dxAgg(p.d.filter(l=>l[5]===DXM0+m)))}</td>`).join("")}<td class="tot">${mVal(p.D)}</td></tr>`).join("")}
     <tr class="tot"><td class="l">Всего</td><td></td>${DXMON.map((_,m)=>`<td>${mVal(dxAgg(C.D.filter(l=>l[5]===DXM0+m)))}</td>`).join("")}<td class="tot">${mVal(C.tD)}</td></tr></tbody></table>`;
 
@@ -1238,9 +1238,9 @@ function renderDeals(){
   const byPace = [...P].sort((x,y)=>y.Q3.n-x.Q3.n || y.D.n-x.D.n);
   const gCls = v => v==null ? "" : v<=-0.1 ? "r" : v>-0.02 ? "g" : "";
   const sCls = v => v==null ? "r" : v>24 ? "r" : v<4 ? "g" : "";
-  const t15 = `<table class="dx fix wide"><thead><tr><th class="l">Проект</th><th class="l">Класс</th><th class="vl">В продаже, лотов</th><th>Цена экспозиции, тыс. ₽/м²</th><th>Ср. площадь экспозиции, м²</th><th class="vl">Сделок янв–сен</th><th>Темп 2026 г., сделок/мес.</th><th>Цена сделок III кв., тыс. ₽/м²</th><th>Ср. площадь сделки III кв., м²</th><th>Ср. бюджет сделки III кв., млн ₽</th><th class="vl">Сделка к экспозиции</th><th>Доля сделок с ипотекой (2026 г.)</th><th>Запас экспозиции, мес.</th></tr></thead><tbody>
-    ${byPace.map(p=>{ const g = F.gap(p), s = F.stock(p); return `<tr><td class="l"><b>${p.s}</b></td><td class="l">${ctag(p.c)}</td><td class="vl">${f0(p.E.n)}</td><td>${dxK(p.E.ppm)}</td><td>${p.E.n?f1(p.E.area):"—"}</td><td class="vl">${p.D.n}</td><td>${f0(p.D.n/9)}</td><td>${p.Q3.n?dxK(p.Q3.ppm):"—"}</td><td>${p.Q3.n?f1(p.Q3.area):"—"}</td><td>${p.Q3.n?dxM(p.Q3.bud):"—"}</td><td class="vl ${gCls(g)}">${dxP1(g)}</td><td>${p.D.n?dxS0(p.D.m/p.D.n):"—"}</td><td class="${sCls(s)}">${s==null?"нет сделок":f1(s)}</td></tr>`; }).join("")}
-    <tr class="dxm"><td class="l">Рынок (${P.length} ЖК)</td><td></td><td class="vl">${f0(C.tE.n)}</td><td>${dxK(C.tE.ppm)}</td><td>${f1(C.tE.area)}</td><td class="vl">${f0(C.tD.n)}</td><td>${f0(C.tD.n/9)}</td><td>${dxK(C.tQ3.ppm)}</td><td>${f1(C.tQ3.area)}</td><td>${dxM(C.tQ3.bud)}</td><td class="vl">${dxP1(C.tQ3.ppm/C.tE.ppm-1)}</td><td>${dxS0(C.tD.m/C.tD.n)}</td><td>${f1(F.mktStock)}</td></tr>
+  const t15 = `<table class="dx fix wide"><thead><tr><th class="l">Проект</th><th class="l">Класс</th><th class="vl">В продаже, лотов</th><th>Цена экспозиции, тыс. ₽/м²</th><th>Ср. площадь экспозиции, м²</th><th class="vl">Сделок янв–окт</th><th>Темп 2026 г., сделок/мес.</th><th>Цена сделок III кв., тыс. ₽/м²</th><th>Ср. площадь сделки III кв., м²</th><th>Ср. бюджет сделки III кв., млн ₽</th><th class="vl">Сделка к экспозиции</th><th>Доля сделок с ипотекой (2026 г.)</th><th>Запас экспозиции, мес.</th></tr></thead><tbody>
+    ${byPace.map(p=>{ const g = F.gap(p), s = F.stock(p); return `<tr><td class="l"><b>${p.s}</b></td><td class="l">${ctag(p.c)}</td><td class="vl">${f0(p.E.n)}</td><td>${dxK(p.E.ppm)}</td><td>${p.E.n?f1(p.E.area):"—"}</td><td class="vl">${p.D.n}</td><td>${f0(p.D.n/DXMON.length)}</td><td>${p.Q3.n?dxK(p.Q3.ppm):"—"}</td><td>${p.Q3.n?f1(p.Q3.area):"—"}</td><td>${p.Q3.n?dxM(p.Q3.bud):"—"}</td><td class="vl ${gCls(g)}">${dxP1(g)}</td><td>${p.D.n?dxS0(p.D.m/p.D.n):"—"}</td><td class="${sCls(s)}">${s==null?"нет сделок":f1(s)}</td></tr>`; }).join("")}
+    <tr class="dxm"><td class="l">Рынок (${P.length} ЖК)</td><td></td><td class="vl">${f0(C.tE.n)}</td><td>${dxK(C.tE.ppm)}</td><td>${f1(C.tE.area)}</td><td class="vl">${f0(C.tD.n)}</td><td>${f0(C.tD.n/DXMON.length)}</td><td>${dxK(C.tQ3.ppm)}</td><td>${f1(C.tQ3.area)}</td><td>${dxM(C.tQ3.bud)}</td><td class="vl">${dxP1(C.tQ3.ppm/C.tE.ppm-1)}</td><td>${dxS0(C.tD.m/C.tD.n)}</td><td>${f1(F.mktStock)}</td></tr>
     <tr class="dxm own"><td class="l">БАЗА-РЖД (прайс)</td><td class="l"><span class="ctag o">бизнес / комфорт</span></td><td class="vl">${f0(C.tRZ.n)}</td><td>${dxK(C.tRZ.ppm)}</td><td>${f1(C.tRZ.area)}</td><td class="vl">—</td><td>—</td><td>—</td><td>—</td><td>${dxM(C.tRZ.bud)}</td><td class="vl">—</td><td>—</td><td>—</td></tr></tbody></table>`;
 
   /* --- exposure price table (slide 11) --- */
@@ -1264,8 +1264,8 @@ function renderDeals(){
    <div class="tile"><span class="tl">Макс. стоимость лота (конкуренты)</span><span class="tv">${nf2.format(Math.max(...ePr)/1e6)} <span class="tu">млн ₽</span></span><span class="ts" style="color:var(--own);font-weight:600">БАЗА-РЖД: ${nf2.format(Math.max(...rPr)/1e6)} млн ₽</span></div>`;
 
   /* --- project summary (slide 4) --- */
-  const t4 = `<table class="sd"><thead><tr><th style="width:11%">Проект</th><th style="width:6%">Класс</th><th style="width:15%">Старт продаж</th><th style="width:6%">Квартир в проекте</th><th style="width:7%">Остаток, шт. / %</th><th style="width:6%">Распро&shy;данность</th><th style="width:6%">Продано янв–сен 2026</th><th style="width:6%">Темп 2026, шт./мес.</th><th style="width:15%">Уходят быстрее (высоколиквидные)</th><th style="width:22%">Зависают (низколиквидные)</th></tr></thead><tbody>
-    ${P.map(p=>`<tr><td><b>${p.s}${p.s==="Clever Park"?" *":""}</b></td><td>${ctag(p.c)}</td><td class="tx2">${DXSTART[p.s]||"—"}</td><td><span class="rt">${f0(p.tot)}</span></td><td><span class="rt">${f0(p.rest)}</span><small>${dxS0(p.rest/p.tot)}</small></td><td><span class="rt">${dxS0(p.sold/p.tot)}</span></td><td><span class="rt">${p.D.n}</span></td><td><span class="rt">${f0(p.D.n/9)}</span></td><td class="tx2">${DXLIQ[p.s]||"—"}</td><td class="tx2">${DXILL[p.s]||"—"}</td></tr>`).join("")}</tbody></table>`;
+  const t4 = `<table class="sd"><thead><tr><th style="width:11%">Проект</th><th style="width:6%">Класс</th><th style="width:15%">Старт продаж</th><th style="width:6%">Квартир в проекте</th><th style="width:7%">Остаток, шт. / %</th><th style="width:6%">Распро&shy;данность</th><th style="width:6%">Продано янв–окт 2026</th><th style="width:6%">Темп 2026, шт./мес.</th><th style="width:15%">Уходят быстрее (высоколиквидные)</th><th style="width:22%">Зависают (низколиквидные)</th></tr></thead><tbody>
+    ${P.map(p=>`<tr><td><b>${p.s}${p.s==="Clever Park"?" *":""}</b></td><td>${ctag(p.c)}</td><td class="tx2">${DXSTART[p.s]||"—"}</td><td><span class="rt">${f0(p.tot)}</span></td><td><span class="rt">${f0(p.rest)}</span><small>${dxS0(p.rest/p.tot)}</small></td><td><span class="rt">${dxS0(p.sold/p.tot)}</span></td><td><span class="rt">${p.D.n}</span></td><td><span class="rt">${f0(p.D.n/DXMON.length)}</span></td><td class="tx2">${DXLIQ[p.s]||"—"}</td><td class="tx2">${DXILL[p.s]||"—"}</td></tr>`).join("")}</tbody></table>`;
 
   /* --- apartment mix (slide 5) --- */
   const t5 = `<table class="dx fix wide"><thead><tr><th class="l">Проект</th><th class="l">Класс</th><th>Мин. лот, м²</th><th>Макс. лот, м²</th><th>Медиана, м²</th><th>Средняя, м²</th>${DXROOMS.map(([,l])=>`<th>${l}</th>`).join("")}<th class="tot">Всего</th></tr></thead><tbody>
@@ -1302,7 +1302,7 @@ function renderDeals(){
     : [["dx-h-concl","Выводы"],["dx-h-exp","Цена и площадь"],["dx-h-exp2","По комнатности"],["dx-h-hist","Динамика цены"],["dx-h-mix","Квартирография"],["dx-h-rzd","БАЗА-РЖД и рынок"]];
   const CC = dxConclusions(C,F);
   const blockD = `
-  <section class="slide">${head("dx-h-concl","Выводы по сделкам",`Сделки ${nPt} янв–сен 2026 · Екатеринбург, Железнодорожный р-н${isAll?"":` · ${selN.join(", ")}`}`)}<ul class="dx-concl">${CC.d}</ul></section>
+  <section class="slide">${head("dx-h-concl","Выводы по сделкам",`Сделки ${nPt} янв–окт 2026 · Екатеринбург, Железнодорожный р-н${isAll?"":` · ${selN.join(", ")}`}`)}<ul class="dx-concl">${CC.d}</ul></section>
   <section class="tiles" aria-label="Сделки, итог">${kpi}</section>
   <section class="slide">${head("dx-h-dyn","Сделки 2026: динамика по месяцам",dynSub)}
     <div class="dx-grid2">
@@ -1312,13 +1312,13 @@ function renderDeals(){
   <section class="slide">${head("dx-h-proj","Сделки по проектам и месяцам",`Отмечены шесть лидеров продаж 2026 г. · ${mMet==="n"?"число сделок, шт.":mMet==="area"?"средняя площадь сделки, м²":"средняя цена сделки, тыс. ₽/м² (Σ бюджетов / Σ площадей)"}`)}
     <div class="ctl" style="font-size:12px;color:var(--muted);font-weight:500">Показать <span class="chips" id="dx-mon-f">${[["n","Сделки, шт."],["area","Ср. площадь сделки, м²"],["ppm","Ср. цена, тыс. ₽/м²"]].map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${mMet===v}">${l}</button>`).join("")}</span></div><div class="tbl">${t6}</div></section>
   <section class="slide">${head("dx-h-proj2","Экспозиция и сделки по проектам",`Экспозиция — лоты «в продаже» на ${DX.asOf}; сделки — «продано» с датой договора в 2026 г. Сортировка — по темпу III кв.`)}<div class="tbl">${t15}</div>
-    <div class="dx-note">Запас экспозиции = лотов в продаже / темп III кв. Цвет: красный — разрыв цены ≥10% или запас >24 мес., зелёный — разрыв <2% или запас <4 мес. Доля ипотеки — по обременению в ЕГРН по сделкам января–сентября 2026 г. (по III кв. часть ипотек может быть ещё не зарегистрирована — доля может быть немного занижена). БАЗА-РЖД — цена с максимальной скидкой, бюджет — по прайсу.</div></section>
+    <div class="dx-note">Запас экспозиции = лотов в продаже / темп III кв. Цвет: красный — разрыв цены ≥10% или запас >24 мес., зелёный — разрыв <2% или запас <4 мес. Доля ипотеки — по обременению в ЕГРН по сделкам января–октября 2026 г. Октябрь 2026 г. неполный: договоры попадают в ЕГРН с задержкой, сделки октября ещё дорегистрируются (по III кв. часть ипотек может быть ещё не зарегистрирована — доля может быть немного занижена). БАЗА-РЖД — цена с максимальной скидкой, бюджет — по прайсу.</div></section>
   <section class="slide">${head("dx-h-sum","Сводные данные по проектам","Квартир в проекте, остаток и продажи — по выгрузке; старт продаж и ликвидность типологий — из отчёта")}<div class="ptbl">${t4}</div>
     <div class="dx-note">Остаток = все квартиры проекта минус «продано» (в остатке — лоты в продаже, в резерве и «вымывание»). * Clever Park долго продавали не по ДДУ — в отчёте остаток отмечен как «н/д», расчётный остаток может быть завышен.</div></section>
-  <section class="slide">${head("dx-h-top","Сделки январь–сентябрь 2026 по комнатности","Цена сделки — расчётный бюджет лота (ЕГРН) / площадь")}
+  <section class="slide">${head("dx-h-top","Сделки январь–октябрь 2026 по комнатности","Цена сделки — расчётный бюджет лота (ЕГРН) / площадь")}
     <div class="dx-grid2"><div>${roomTbl(C.isB(C.D),"Бизнес-класс")}</div><div>${roomTbl(C.isC(C.D),"Комфорт-класс")}</div></div></section>
-  <section class="slide">${head("dx-h-top2","Самые продаваемые лоты: по количеству комнат","Доля сделок янв–сен 2026 в каждом проекте; число сделок — при наведении")}<div class="tbl">${tRooms}</div></section>
-  <section class="slide">${head("dx-h-top3","Самые продаваемые лоты: по площади","Доля сделок янв–сен 2026 по диапазонам площади, шаг 5 м²")}<div class="tbl">${tArea}</div></section>`;
+  <section class="slide">${head("dx-h-top2","Самые продаваемые лоты: по количеству комнат","Доля сделок янв–окт 2026 в каждом проекте; число сделок — при наведении")}<div class="tbl">${tRooms}</div></section>
+  <section class="slide">${head("dx-h-top3","Самые продаваемые лоты: по площади","Доля сделок янв–окт 2026 по диапазонам площади, шаг 5 м²")}<div class="tbl">${tArea}</div></section>`;
   const blockE = `
   <section class="slide">${head("dx-h-concl","Выводы по экспозиции",`Лоты ${nPt} в продаже на ${DX.asOf} и прайс БАЗА-РЖД${isAll?"":` · ${selN.join(", ")}`}`)}<ul class="dx-concl">${CC.e}</ul></section>
   <section class="tiles" aria-label="Экспозиция, итог">${kpiE}</section>
@@ -1347,8 +1347,8 @@ function renderDeals(){
   <section class="slide">${head("dx-h-rzd","БАЗА-РЖД и рынок: цена, площадь, бюджет",`Прайс БАЗА-РЖД (${C.tRZ.n} ${lots(C.tRZ.n)}, цена с максимальной скидкой) против экспозиции и сделок ${nPt}`)}
     <div class="tbl">${tRz}</div>
     <div class="dx-grid2">
-      <div><h3>Структура по площади, % лотов / сделок</h3><div class="legend"><span><span class="sw" style="background:${deal}"></span>Сделки рынка янв–сен</span><span><span class="sw" style="background:${own}"></span>Прайс БАЗА-РЖД</span></div><div class="dx-chart mid"><canvas id="dx-c-ra" aria-label="Структура по площади"></canvas></div></div>
-      <div><h3>Структура по бюджету, млн ₽, % лотов / сделок</h3><div class="legend"><span><span class="sw" style="background:${deal}"></span>Сделки рынка янв–сен</span><span><span class="sw" style="background:${own}"></span>Прайс БАЗА-РЖД</span></div><div class="dx-chart mid"><canvas id="dx-c-rb" aria-label="Структура по бюджету"></canvas></div></div>
+      <div><h3>Структура по площади, % лотов / сделок</h3><div class="legend"><span><span class="sw" style="background:${deal}"></span>Сделки рынка янв–окт</span><span><span class="sw" style="background:${own}"></span>Прайс БАЗА-РЖД</span></div><div class="dx-chart mid"><canvas id="dx-c-ra" aria-label="Структура по площади"></canvas></div></div>
+      <div><h3>Структура по бюджету, млн ₽, % лотов / сделок</h3><div class="legend"><span><span class="sw" style="background:${deal}"></span>Сделки рынка янв–окт</span><span><span class="sw" style="background:${own}"></span>Прайс БАЗА-РЖД</span></div><div class="dx-chart mid"><canvas id="dx-c-rb" aria-label="Структура по бюджету"></canvas></div></div>
     </div></section>`;
   root.innerHTML = `
   <section class="filters" aria-label="Блоки отчёта">
@@ -1356,10 +1356,10 @@ function renderDeals(){
     <div class="ctl">Конкуренты <span class="chips dx-cw"><span class="chips" id="dx-comp"><button class="chip" data-g="all" aria-pressed="${isAll}">Все (${DXP.length})</button><button class="chip" data-g="main" aria-pressed="${isMain}">Основные конкуренты (${DX_MAIN.length})</button></span>
       <details class="dd" id="dx-dd"${DX_DD_OPEN ? " open" : ""}><summary class="chip dd-btn"${!isAll && !isMain ? ' aria-pressed="true"' : ""}>${ddLbl}</summary><div class="dd-menu" id="dx-comp-p">${DXP.map(p=>`<label class="dd-it"><input type="checkbox" data-p="${p.s}"${selN.includes(p.s) ? " checked" : ""}><span>${p.s}</span>${DX_MAIN.includes(p.s) ? `<small>основной</small>` : ""}</label>`).join("")}</div></details></span></div>
     <div class="ctl">Перейти к разделу <span class="chips" id="dx-nav">${navs.map(([id,l])=>`<button class="chip" data-t="${id}">${l}</button>`).join("")}</span></div>
-    <div class="src">${blk==="d" ? `Сделки — лоты «продано» с датой договора янв–сен 2026; ${nPt}` : `Экспозиция — лоты «в продаже» на ${DX.asOf}; ${nPt}; БАЗА-РЖД — прайс, цена с макс. скидкой`}</div>
+    <div class="src">${blk==="d" ? `Сделки — лоты «продано» с датой договора янв–окт 2026 (октябрь неполный — регистрация в ЕГРН с задержкой); ${nPt}` : `Экспозиция — лоты «в продаже» на ${DX.asOf}; ${nPt}; БАЗА-РЖД — прайс, цена с макс. скидкой`}</div>
   </section>
   ${blk==="d" ? blockD : blockE}
-  <div class="foot"><div><b>Источник</b> — Google-таблица конкурентов, лист «Объед. данные (РЖД)» (выгрузка Объектива на ${DX.asOf}, ${f0(DXL.length)} квартир 11 проектов; Символ исключён из сравнения). Сделки — лоты в статусе «продано» с датой договора янв–сен 2026 г.; цена сделки — расчётный бюджет лота (ЕГРН) / площадь (сводная). Экспозиция — лоты «в продаже», цена предложения; комнатность — данные Объектива. Ипотека — наличие обременения в ЕГРН.</div>
+  <div class="foot"><div><b>Источник</b> — Google-таблица конкурентов, лист «Объед. данные (РЖД)» (выгрузка Объектива на ${DX.asOf}, ${f0(DXL.length)} квартир 11 проектов; Символ исключён из сравнения). Сделки — лоты в статусе «продано» с датой договора янв–окт 2026 г.; цена сделки — расчётный бюджет лота (ЕГРН) / площадь (сводная). Экспозиция — лоты «в продаже», цена предложения; комнатность — данные Объектива. Ипотека — наличие обременения в ЕГРН.</div>
     <div>Из отчёта «РЖД_аналитика_19.10.2026» взяты данные, которых нет в таблице: история средней цены экспозиции до сентября 2026 г., старт продаж, ликвидность типологий. БАЗА-РЖД — прайс, цена с максимальной скидкой (как на вкладке «Прайс»).</div></div>`;
 
   /* --- charts --- */
@@ -1470,7 +1470,7 @@ function dxRecsHTML(){
   return `<div class="sh"><div><h2>Рекомендации по условиям продаж БАЗА-РЖД</h2><div class="dt">По сравнению прайса с экспозицией и сделками конкурентов (раздел «Сделки и экспозиция») и их условиям продаж на октябрь 2026 г.</div></div></div>
     <p class="dx-lead">Цена БАЗА-РЖД с максимальной скидкой — <b>${f1(C.tRZ.ppm/1000)} тыс. ₽/м²</b>: на ${Math.round(Math.abs(F.vsE)*100)}% ${F.vsE<0?"ниже":"выше"} экспозиции конкурентов и на ${Math.round(Math.abs(F.vsQ3)*100)}% ${F.vsQ3<0?"ниже":"выше"} фактических сделок III кв. (${f1(C.tQ3.ppm/1000)}). Задача условий продаж — не снижать цену дальше, а сделать покупку доступнее по платежу и закрыть «слабые» типологии.</p>
     <div class="dx-recs">${recs.map(([h,items,acc])=>`<div class="dx-rec ${acc?"acc":""}"><h3>${h}</h3><ul>${items.map(x=>`<li>${x}</li>`).join("")}</ul></div>`).join("")}</div>
-    <div class="dx-note">Рекомендации основаны на сравнении прайса БАЗА-РЖД (цена с максимальной скидкой) с экспозицией и сделками конкурентов янв–сен 2026 г. и их условиями продаж на октябрь 2026 г.</div>`;
+    <div class="dx-note">Рекомендации основаны на сравнении прайса БАЗА-РЖД (цена с максимальной скидкой) с экспозицией и сделками конкурентов янв–окт 2026 г. и их условиями продаж на октябрь 2026 г.</div>`;
 }
 function renderDxRecs(){
   const el = document.getElementById("s-rec"); if(el) el.innerHTML = dxRecsHTML();
