@@ -237,6 +237,7 @@ table.dx td.hm{text-align:center}
 table.dx td.tot,table.dx th.tot{font-weight:600;box-shadow:inset 1px 0 0 var(--line-strong)}
 table.dx .sm{display:block;font-size:10.5px;color:var(--muted);font-weight:400}
 table.dx.wide{min-width:1080px}
+table.dx.prof td.l{white-space:nowrap} table.dx.prof td.fin{white-space:normal;font-size:11px;line-height:1.3;color:var(--muted)} table.dx.prof th{white-space:normal}
 table.dx th.vl,table.dx td.vl{box-shadow:inset 1px 0 0 var(--line-strong)}
 table.dx.fix td:first-child,table.dx.fix th:first-child{position:sticky;left:0;background:var(--surface);z-index:1;box-shadow:1px 0 0 var(--line)}
 table.dx.fix tr.dxm td:first-child{background:#EEF4FA} table.dx.fix tr.dxm.own td:first-child{background:#FDECEE} table.dx.fix tr.hd td:first-child{background:var(--bg)}
@@ -1379,9 +1380,26 @@ function renderDeals(){
     ${F.roomDev.filter(r=>r.rz.n||r.d.n).map(r=>`<tr><td class="l">${r.l}</td><td>${r.rz.n||"—"}</td><td>${dxS0(r.rz.n/C.tRZ.n)}</td><td>${dxS0(r.d.n/C.tD.n)}</td><td class="own">${r.rz.n?dxK(r.rz.ppm):"—"}</td><td>${dxK(r.e.ppm)}</td><td>${dxK(r.q.ppm)}</td><td class="${r.devE==null?"":r.devE<0?"g":"r"}">${dxP0(r.devE)}</td><td class="${r.dev==null?"":Math.abs(r.dev)<0.015?"":r.dev<0?"g":"r"}">${dxP0(r.dev)}</td></tr>`).join("")}
     <tr class="tot"><td class="l">Итого</td><td>${C.tRZ.n}</td><td>100%</td><td>100%</td><td class="own">${dxK(C.tRZ.ppm)}</td><td>${dxK(C.tE.ppm)}</td><td>${dxK(C.tQ3.ppm)}</td><td>${dxP0(F.vsE)}</td><td>${dxP0(F.vsQ3)}</td></tr></tbody></table>`;
 
+  /* --- профиль спроса: проекты × комнатность за период (как в дашборде Бестселлера) --- */
+  const DXPER = [[1,"Месяц"],[3,"3 мес."],[6,"6 мес."],[DXMON.length,"Янв–окт"]];
+  const pPer = DXPER.some(p=>p[0]===S.dprof) ? S.dprof : 3, pM1 = DXM0+DXMON.length-1, pM0 = pM1-pPer+1;
+  const pD = C.D.filter(l=>l[5]>=pM0), pFin = PF.find(f=>f.l==="Отделка");
+  const finOf = n => { const i = PJ.findIndex(p=>p.s===n || p.f.startsWith(n)); return i<0 || !pFin ? "—" : pFin.v[i].t; };
+  const pCols = P.map(p=>({s:p.s, d:pD.filter(l=>l[0]===p.i)})).filter(p=>p.d.length).sort((a,b)=>b.d.length-a.d.length);
+  const pAll = [...pCols, {s:"Итого", d:pD, tot:true}], pRooms = DXROOMS.filter(([k])=>pD.some(l=>l[2]===k));
+  const pCell = (c, k, fn) => { const rows = k==null ? c.d : c.d.filter(l=>l[2]===k); return `<td${c.tot?' class="tot"':""}>${rows.length ? fn(dxAgg(rows)) : ""}</td>`; };
+  const pLbl = pPer===1 ? `${DXMON[pM1-DXM0]} 2026` : `${DXMON[pM0-DXM0]}–${DXMON[pM1-DXM0]} 2026`;
+  let tProf = `<table class="dx fix prof"><thead><tr><th class="l"></th>${pCols.map(c=>`<th>${c.s}</th>`).join("")}<th class="tot">Итого</th></tr></thead><tbody>
+    <tr><td class="l">Отделка</td>${pCols.map(c=>`<td class="hm fin">${finOf(c.s)}</td>`).join("")}<td class="tot"></td></tr>`;
+  for(const [lab, fn] of [["Сделок, шт.", a=>f0(a.n)],["Ср. площадь, м²", a=>f1(a.area)],["Цена, тыс. ₽/м²", a=>dxK(a.ppm)],["Ср. бюджет, млн ₽", a=>dxM(a.bud)]]){
+    tProf += `<tr class="hd"><td class="l">${lab}</td>${pAll.map(c=>pCell(c,null,fn)).join("")}</tr>`;
+    for(const [k,l] of pRooms) tProf += `<tr class="sub"><td class="l">${l}</td>${pAll.map(c=>pCell(c,k,fn)).join("")}</tr>`;
+  }
+  tProf += `<tr class="tot"><td class="l">Доля ипотеки</td>${pAll.map(c=>pCell(c,null,a=>dxS0(a.m/a.n))).join("")}</tr></tbody></table>`;
+
   const blk = S.dblk==="e" ? "e" : "d";
   const navs = blk==="d"
-    ? [["dx-h-concl","Выводы"],["dx-h-dyn","Динамика"],["dx-h-proj","По месяцам"],["dx-h-proj2","Сделки к экспозиции"],["dx-h-sum","Сводные данные"],["dx-h-top","Что покупают"]]
+    ? [["dx-h-concl","Выводы"],["dx-h-dyn","Динамика"],["dx-h-proj","По месяцам"],["dx-h-proj2","Сделки к экспозиции"],["dx-h-sum","Сводные данные"],["dx-h-top","Что покупают"],["dx-h-prof","Профиль спроса"]]
     : [["dx-h-concl","Выводы"],["dx-h-exp","Цена и площадь"],["dx-h-exp2","По комнатности"],["dx-h-hist","Динамика цены"],["dx-h-mix","Квартирография"],["dx-h-rzd","БАЗА-РЖД и рынок"]];
   const CC = dxConclusions(C,F);
   const blockD = `
@@ -1401,7 +1419,9 @@ function renderDeals(){
   <section class="slide">${head("dx-h-top","Сделки январь–октябрь 2026 по комнатности","Цена сделки — расчётный бюджет лота (ЕГРН) / площадь")}
     <div class="dx-grid2"><div>${roomTbl(C.isB(C.D),"Бизнес-класс")}</div><div>${roomTbl(C.isC(C.D),"Комфорт-класс")}</div></div></section>
   <section class="slide">${head("dx-h-top2","Самые продаваемые лоты: по количеству комнат","Доля сделок янв–окт 2026 в каждом проекте; число сделок — при наведении")}<div class="tbl">${tRooms}</div></section>
-  <section class="slide">${head("dx-h-top3","Самые продаваемые лоты: по площади","Доля сделок янв–окт 2026 по диапазонам площади, шаг 5 м²")}<div class="tbl">${tArea}</div></section>`;
+  <section class="slide">${head("dx-h-top3","Самые продаваемые лоты: по площади","Доля сделок янв–окт 2026 по диапазонам площади, шаг 5 м²")}<div class="tbl">${tArea}</div></section>
+  <section class="slide">${head("dx-h-prof","Сделки. Профиль спроса",`${pLbl} · ${nPt} · цена = Σ бюджетов / Σ площадей, без поправки на отделку${pM1-DXM0===DXMON.length-1?" · октябрь неполный — договоры дорегистрируются в ЕГРН":""}`)}
+    <div class="ctl" style="font-size:12px;color:var(--muted);font-weight:500">Период <span class="chips" id="dx-prof-f">${DXPER.map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${pPer===v}">${l}</button>`).join("")}</span></div><div class="tbl">${tProf}</div></section>`;
   const blockE = `
   <section class="slide">${head("dx-h-concl","Выводы по экспозиции",`Лоты ${nPt} в продаже на ${DX.asOf} и прайс БАЗА-РЖД${isAll?"":` · ${selN.join(", ")}`}`)}<ul class="dx-concl">${CC.e}</ul></section>
   <section class="tiles" aria-label="Экспозиция, итог">${kpiE}</section>
@@ -1515,6 +1535,7 @@ function renderDeals(){
   root.querySelector("#dx-nav").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const t = document.getElementById(b.dataset.t); if(t) t.closest(".slide").scrollIntoView({behavior:"smooth", block:"start"}); });
   root.querySelector("#dx-blk").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b || b.dataset.v===blk) return; S.dblk = b.dataset.v; save(); render(); document.getElementById("deals-view").scrollIntoView({block:"start"}); window.scrollTo(0,0); });
   const mf = root.querySelector("#dx-mon-f"); if(mf) mf.addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const y = window.scrollY; S.dmon = b.dataset.v; save(); render(); window.scrollTo(0, y); });
+  const pf = root.querySelector("#dx-prof-f"); if(pf) pf.addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const y = window.scrollY; S.dprof = +b.dataset.v; save(); render(); window.scrollTo(0, y); });
   const hf = root.querySelector("#dx-hist-f"); if(hf) hf.addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const y = window.scrollY; S.dhist = b.dataset.v; save(); render(); window.scrollTo(0, y); });
 }
 
