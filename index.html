@@ -1078,7 +1078,7 @@ document.getElementById("secs").addEventListener("click",e=>{ const tr=e.target.
 document.getElementById("secs").addEventListener("keydown",e=>{ const tr=e.target.closest("tr[data-s]"); if(tr&&(e.key==="Enter"||e.key===" ")){ e.preventDefault(); toggleSec(tr.dataset.s); } });
 document.getElementById("f-type").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.type=b.dataset.v; save(); render(); });
 
-document.getElementById("eyebrow").textContent = `Екатеринбург, Железнодорожный р-н · прайс ${DATA.rzd.length} лотов${DATA.pdate ? " на " + DATA.pdate : ""} · 11 конкурентов`;
+document.getElementById("eyebrow").textContent = `Екатеринбург, Железнодорожный р-н · прайс ${DATA.rzd.length} ${(n=>n%10===1&&n%100!==11?"лот":[2,3,4].includes(n%10)&&![12,13,14].includes(n%100)?"лота":"лотов")(DATA.rzd.length)}${DATA.pdate ? " на " + DATA.pdate : ""} · 11 конкурентов`;
 /* «Выводы»: цифры БАЗА-РЖД считаются из DATA.rzd (обновляется раз в день из Google-таблицы); медианы рынка — статичные */
 (() => {
   const R = DATA.rzd, A = R.reduce((s,r)=>s+r[1],0), V = R.reduce((s,r)=>s+r[2],0), avg = V/A/1000;
@@ -1284,6 +1284,16 @@ function renderDeals(){
     ${mrow("Средняя площадь лота, м²", r=>val(r,"area",null,1), true)}${DXROOMS.map(([t,l])=>mrow(l, r=>val(r,"area",t,1))).join("")}
     ${mrow("Лотов в продаже", r=>f0(r.length), true)}</tbody></table>`;
 
+  /* --- exposure by rooms: competitors in rows, price + area per room type --- */
+  const rc = (rows,t) => { const a = dxAgg(sub(rows,t)); return a.n ? `<td class="vl">${dxK(a.ppm)}</td><td>${f1(a.area)}</td>` : `<td class="vl">—</td><td>—</td>`; };
+  const rcCols = [...DXROOMS, [null,"Все лоты"]];
+  const rcRow = (cls, label, tag, rows) => `<tr class="${cls}"><td class="l">${label}</td><td class="l">${tag}</td>${rcCols.map(([t])=>rc(rows,t)).join("")}</tr>`;
+  const tRc = `<table class="dx fix wide"><thead><tr><th class="l" rowspan="2">Проект</th><th class="l" rowspan="2">Класс</th>${rcCols.map(([,l])=>`<th class="vl" colspan="2">${l}</th>`).join("")}</tr>
+    <tr>${rcCols.map(()=>`<th class="vl">Цена, тыс. ₽/м²</th><th>Ср. площадь, м²</th>`).join("")}</tr></thead><tbody>
+    ${P.map(p=>rcRow("", `<b>${p.s}</b>`, ctag(p.c), p.e)).join("")}
+    ${rcRow("dxm", `Рынок (${P.length} ЖК)`, "", C.E)}
+    ${rcRow("dxm own", "БАЗА-РЖД (прайс)", `<span class="ctag o">бизнес / комфорт</span>`, C.RZ)}</tbody></table>`;
+
   /* --- exposure KPI (slide 14) --- */
   const ePr = C.E.map(l=>l[4]).filter(v=>v>0), rPr = C.RZ.map(l=>l[4]);
   const kpiE = `
@@ -1357,6 +1367,7 @@ function renderDeals(){
       <div><h3>Средняя площадь лота, м²</h3><div class="dx-chart tall"><canvas id="dx-c-earea" aria-label="Средняя площадь экспозиции по проектам"></canvas></div></div>
     </div></section>
   <section class="slide">${head("dx-h-exp2",`Цена экспозиции по комнатности на ${DX.asOf}`,"Средняя цена м², стоимость лота, минимальная цена и площадь — по каждому проекту и БАЗА-РЖД")}<div class="tbl">${t11}</div></section>
+  <section class="slide">${head("dx-h-exp3",`Конкуренты по комнатности: цена экспозиции и средняя площадь на ${DX.asOf}`,"Цена предложения конкурентов, БАЗА-РЖД — прайс, цена с максимальной скидкой. Цена м² = Σ цен / Σ площадей")}<div class="tbl">${tRc}</div></section>
   <section class="slide">${head("dx-h-hist","Средняя цена экспозиции конкурентов: динамика",`Помесячные значения янв 2025 – сен 2026 — из отчёта «РЖД_аналитика_19.10.2026»; последняя точка — расчёт по выгрузке ${DX.asOf}`)}
     <div class="ctl" style="font-size:12px;color:var(--muted);font-weight:500">Проекты <span class="chips" id="dx-hist-f"><button class="chip" data-v="all" aria-pressed="${S.dhist!=="bus"}">Все конкуренты</button><button class="chip" data-v="bus" aria-pressed="${S.dhist==="bus"}">Только бизнес-класс</button></span></div>
     <div class="dx-grid2">
