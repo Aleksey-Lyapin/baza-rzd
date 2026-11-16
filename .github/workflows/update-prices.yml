@@ -1,0 +1,27 @@
+name: Обновление цен из Google-таблицы
+
+on:
+  schedule:
+    - cron: "0 2 * * *"   # каждый день в 07:00 по Екатеринбургу
+  workflow_dispatch:       # ручной запуск: Actions → Run workflow
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Цены из листа «Прайс»
+        run: node scripts/update-prices.js
+      - name: Коммит, если цены изменились
+        run: |
+          if git diff --quiet; then echo "Без изменений"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Цены БАЗА-РЖД из Google-таблицы ($(TZ=Asia/Yekaterinburg date +%d.%m.%Y))"
+          git push
