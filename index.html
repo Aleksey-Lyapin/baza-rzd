@@ -362,6 +362,13 @@ table.dx.fix tr.dxm td:first-child{background:#EEF4FA} table.dx.fix tr.dxm.own t
 
   <section class="grid-charts" id="charts" aria-label="Графики по группам"></section>
 
+  <section class="slide" aria-label="Сравнение с конкурентом">
+    <div class="sh"><div><h2 id="vs-title">БАЗА-РЖД и конкурент: по площади с шагом 5 м²</h2><div class="dt" id="vs-sub"></div></div></div>
+    <div class="ctl" style="font-size:12px;color:var(--muted);font-weight:500">Конкурент <span class="chips" id="vs-comp"></span></div>
+    <div class="tbl"><table id="vs" class="dx"></table></div>
+    <div class="foot" style="margin-top:0">Площадь лота — по 5 м² (например, 41–45 м²) без деления на комнатность. Отклонение — цена м² БАЗА-РЖД к средней цене м² сделок конкурента в той же площади: синим — мы дешевле, красным — дороже. В итоге — только площади, где есть и сделки конкурента, и наши лоты, взвешено по нашей площади.</div>
+  </section>
+
   <div class="foot" id="foot"></div>
  </div>
  <div class="view" id="deals-view" hidden></div>
@@ -631,7 +638,33 @@ function render(){
       <div class="legend"><span><span class="sw" style="background:${css("--deal")}"></span>Сделки за ${f0(DATA.period.months)} мес.</span><span><span class="sw" style="background:${css("--expo")}"></span>Экспозиция</span><span><span class="sw" style="background:${css("--own")}"></span>БАЗА-РЖД (прайс)</span>${rOut.length ? `<span style="color:var(--muted)">${rOut.length===1 ? "Не показан" : "Не показаны"}: ${rOut.join(", ")} — ${rOut.length===1 ? "не входит" : "не входят"} в выборку</span>` : ""}</div>
     </article>`).join("") || `<div class="empty">Нет групп для выбранного фильтра</div>`;
   shown.forEach((a,i)=>drawChart(box.querySelectorAll("canvas")[i], a));
+  renderVs();
 }
+
+/* сравнение с одним конкурентом: площадь шагом 5 м², сделки конкурента за период vs прайс БАЗА-РЖД */
+function renderVs(){
+  const withDeals = P.map((p,i)=>({s:p.s, i, n:DATA.deals.filter(r=>r[0]===i).length})).filter(p=>p.n);
+  if(!withDeals.some(p=>p.s===S.vs)) S.vs = withDeals.some(p=>p.s==="Тихий центр") ? "Тихий центр" : withDeals[0].s;
+  const ci = withDeals.find(p=>p.s===S.vs).i, iR = S.mode==="corr"?3:2, iD = S.mode==="corr"?4:3;
+  document.getElementById("vs-comp").innerHTML = withDeals.map(p=>`<button class="chip" data-v="${p.s}" aria-pressed="${p.s===S.vs}">${p.s}</button>`).join("");
+  const B = new Map(), cell = lo => { if(!B.has(lo)) B.set(lo, {lo, d:{n:0,a:0,p:0}, o:{n:0,a:0,p:0}}); return B.get(lo); };
+  for(const r of DATA.deals) if(r[0]===ci){ const o = cell(bucket(r[2])).d; o.n++; o.a+=r[2]; o.p+=r[iD]; }
+  for(const r of rzdF()){ const o = cell(bucket(r[1])).o; o.n++; o.a+=r[1]; o.p+=r[iR]; }
+  const fin = o => ({n:o.n, ppm:o.n?o.p/o.a:null, area:o.n?o.a/o.n:null, bud:o.n?o.p/o.n:null});
+  const rows = [...B.values()].sort((a,b)=>a.lo-b.lo).map(b=>({lo:b.lo, d:fin(b.d), o:fin(b.o)}));
+  const sum = k => { const t = {n:0,a:0,p:0}; for(const b of B.values()){ t.n+=b[k].n; t.a+=b[k].a; t.p+=b[k].p; } return fin(t); };
+  const TD = sum("d"), TO = sum("o"), r0 = v => v==null||Math.abs(v)<0.0005 ? (v==null?null:0) : v, dev = (o,d) => o.n&&d.n ? r0(o.ppm/d.ppm-1) : null;
+  let wo = 0, wd = 0; for(const r of rows) if(r.o.n&&r.d.n){ const a = r.o.n*r.o.area; wo += a*r.o.ppm; wd += a*r.d.ppm; }
+  const devT = wd ? r0(wo/wd-1) : null;
+  const cells = (d,o,vT) => { const v = vT!==undefined ? vT : dev(o,d); return `<td class="vl">${d.n||"—"}</td><td>${d.n?f1(d.area):"—"}</td><td>${d.n?dxK(d.ppm):"—"}</td><td>${d.n?dxM(d.bud):"—"}</td>
+    <td class="vl">${o.n||"—"}</td><td>${o.n?f1(o.area):"—"}</td><td class="own">${o.n?dxK(o.ppm):"—"}</td><td>${o.n?dxM(o.bud):"—"}</td><td class="vl ${devCls(v)}">${pc(v)}</td>`; };
+  document.getElementById("vs").innerHTML = `<thead><tr><th class="l" rowspan="2">Площадь, м²</th><th class="vl" colspan="4" style="text-align:center">${S.vs} — сделки</th><th class="vl own" colspan="4" style="text-align:center">БАЗА-РЖД — прайс</th><th class="vl" rowspan="2">БАЗА-РЖД к сделкам конкурента</th></tr>
+    <tr><th class="vl">Сделок</th><th>Ср. площадь, м²</th><th>Ср. цена, тыс. ₽/м²</th><th>Ср. бюджет, млн ₽</th><th class="vl">Лотов</th><th>Ср. площадь, м²</th><th>Цена, тыс. ₽/м²</th><th>Ср. бюджет, млн ₽</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td class="l">${r.lo}–${r.lo+4}</td>${cells(r.d,r.o)}</tr>`).join("")}
+    <tr class="tot"><td class="l">Итого</td>${cells(TD,TO,devT)}</tr></tbody>`;
+  document.getElementById("vs-sub").textContent = `${S.vs}: сделки 01.05–${DATA.period.to} · БАЗА-РЖД: ${S.secs.length ? "секции " + S.secs.map(s=>"С"+s).join(", ") : "все секции"}, текущий прайс (цена с макс. скидкой) · ${S.mode==="corr" ? "цены с поправкой на отделку" : "цены без поправок"}`;
+}
+document.getElementById("vs-comp").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b || b.dataset.v===S.vs) return; S.vs = b.dataset.v; save(); renderVs(); });
 
 /* median lines plugin */
 const medLines = { id:"medLines", afterDatasetsDraw(ch, args, o){ const {ctx, chartArea:ca, scales:{y}} = ch;
