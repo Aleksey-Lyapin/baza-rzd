@@ -246,6 +246,8 @@ table.dx.prof tr.rm td.l{padding-left:20px;font-size:12px;color:var(--ink2)}
 table.dx.prof tr.pt td,table.dx.prof tbody tr.pt:hover td{background:#BFD4E8;font-weight:700;border-top:1px solid #94B4D4;padding-top:4px;padding-bottom:4px}
 table.dx.prof tr.pt td:first-child{box-shadow:inset 3px 0 0 var(--ink)}
 table.dx.prof td.totc,table.dx.prof tbody tr:hover td.totc{background:#EDF6FF;font-weight:600} table.dx.prof tr.pm td.totc{background:#D8E6F4} table.dx.prof tr.pt td.totc{background:#BFD4E8}
+table.dx.prof.plain td,table.dx.prof.plain th,table.dx.prof.plain tbody tr:hover td{background:transparent;box-shadow:none} table.dx.prof.plain td{padding:7px 8px} table.dx.prof.plain thead th{background:#ECEEF1}
+table.dx.prof.plain td:first-child{font-weight:600} table.dx.prof.plain td:last-child,table.dx.prof.plain th:last-child{font-weight:700} table.dx.prof.plain .bm{color:var(--own);font-weight:700}
 table.dx.prof.fix tr.pm td:first-child{background:#D8E6F4} table.dx.prof.fix tr.pt td:first-child{background:#BFD4E8}
 table.dx th.vl,table.dx td.vl{box-shadow:inset 1px 0 0 var(--line-strong)}
 table.dx.fix td:first-child,table.dx.fix th:first-child{position:sticky;left:0;background:var(--surface);z-index:1;box-shadow:1px 0 0 var(--line)}
@@ -1406,9 +1408,18 @@ function renderDeals(){
   }
   tProf += `<tr class="pt"><td class="l">Доля ипотеки</td>${pAll.map(c=>pCell(c,null,a=>dxS0(a.m/a.n))).join("")}</tr></tbody></table>`;
 
+  /* --- профиль спроса: итоги по проектам (как в дашборде Бестселлера); БАЗА-РЖД — прайс, цена с макс. скидкой --- */
+  const pRZ = dxAgg(C.RZ), pTot = dxAgg(pD);
+  const pIt = [...pCols.map(c=>({s:c.s, a:dxAgg(c.d), fin:finOf(c.s)})), {s:"БАЗА-РЖД", a:pRZ, fin:"White box / черновая", own:true}].sort((x,y)=>y.a.ppm-x.a.ppm);
+  let tProf2 = `<table class="dx prof plain"><colgroup><col class="lab">${pIt.map(()=>"<col>").join("")}<col></colgroup><thead><tr><th class="l"></th>${pIt.map(x=>`<th${x.own?' class="bm"':""}>${x.s}</th>`).join("")}<th>Итого</th></tr></thead><tbody>
+    <tr><td class="l">Отделка</td>${pIt.map(x=>`<td class="fin${x.own?" bm":""}">${x.fin}</td>`).join("")}<td></td></tr>`;
+  for(const [lab, fn, fo] of [["Сделок, шт.", a=>f0(a.n), a=>`${f0(a.n)}<span class="sm">лотов в прайсе</span>`],["Ср. площадь, м²", a=>f1(a.area)],["Цена м², тыс. ₽", a=>dxK(a.ppm)],["Бюджет, млн ₽", a=>dxM(a.bud)],["Ипотека", a=>dxS0(a.m/a.n), ()=>"—"]])
+    tProf2 += `<tr><td class="l">${lab}</td>${pIt.map(x=>`<td${x.own?' class="bm"':""}>${x.own && fo ? fo(x.a) : fn(x.a)}</td>`).join("")}<td>${fn(pTot)}</td></tr>`;
+  tProf2 += `</tbody></table>`;
+
   const blk = S.dblk==="e" ? "e" : "d";
   const navs = blk==="d"
-    ? [["dx-h-concl","Выводы"],["dx-h-dyn","Динамика"],["dx-h-proj","По месяцам"],["dx-h-proj2","Сделки к экспозиции"],["dx-h-sum","Сводные данные"],["dx-h-top","Что покупают"],["dx-h-prof","Профиль спроса"]]
+    ? [["dx-h-concl","Выводы"],["dx-h-dyn","Динамика"],["dx-h-proj","По месяцам"],["dx-h-proj2","Сделки к экспозиции"],["dx-h-sum","Сводные данные"],["dx-h-top","Что покупают"],["dx-h-prof","Профиль спроса"],["dx-h-prof2","Итоги по проектам"]]
     : [["dx-h-concl","Выводы"],["dx-h-exp","Цена и площадь"],["dx-h-exp2","По комнатности"],["dx-h-hist","Динамика цены"],["dx-h-mix","Квартирография"],["dx-h-rzd","БАЗА-РЖД и рынок"]];
   const CC = dxConclusions(C,F);
   const blockD = `
@@ -1430,7 +1441,12 @@ function renderDeals(){
   <section class="slide">${head("dx-h-top2","Самые продаваемые лоты: по количеству комнат","Доля сделок янв–окт 2026 в каждом проекте; число сделок — при наведении")}<div class="tbl">${tRooms}</div></section>
   <section class="slide">${head("dx-h-top3","Самые продаваемые лоты: по площади","Доля сделок янв–окт 2026 по диапазонам площади, шаг 5 м²")}<div class="tbl">${tArea}</div></section>
   <section class="slide">${head("dx-h-prof","Сделки. Профиль спроса",`${pLbl} · ${nPt} · цена = Σ бюджетов / Σ площадей, без поправки на отделку`)}
-    <div class="ctl" style="font-size:12px;color:var(--muted);font-weight:500">Период <span class="chips" id="dx-prof-f">${DXPER.map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${pPer===v}">${l}</button>`).join("")}</span></div><div class="tbl">${tProf}</div></section>`;
+    <div class="ctl" style="font-size:12px;color:var(--muted);font-weight:500">Период <span class="chips" id="dx-prof-f">${DXPER.map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${pPer===v}">${l}</button>`).join("")}</span></div><div class="tbl">${tProf}</div></section>
+  <section class="slide">${head("dx-h-prof2","Сделки. Профиль спроса: итоги по проектам",`${pLbl} · ${nPt} · проекты по убыванию цены м² · БАЗА-РЖД — прайс, цена с максимальной скидкой (${f0(pRZ.n)} ${lots(pRZ.n)}) · «Итого» — сделки конкурентов`)}
+    <div class="ctl" style="font-size:12px;color:var(--muted);font-weight:500">Период <span class="chips" id="dx-prof-f2">${DXPER.map(([v,l])=>`<button class="chip" data-v="${v}" aria-pressed="${pPer===v}">${l}</button>`).join("")}</span></div><div class="tbl">${tProf2}</div>
+    <div><h3>Цена м², средняя площадь и число сделок</h3><div class="dx-note" style="margin-top:-4px">по проектам, в том же порядке, что и таблица; у БАЗА-РЖД — прайс, без точки сделок</div></div>
+    <div class="dx-chart" style="height:260px"><canvas id="dx-c-prof" aria-label="Цена м², средняя площадь и число сделок по проектам"></canvas></div>
+    <div class="legend"><span><span class="sw" style="background:#C3C8CF"></span>Цена м², тыс. ₽ (столбик; БАЗА-РЖД — красный)</span><span><span class="sw" style="background:#FEF3F3;border:1px solid #F6B4B9"></span>Средняя площадь, м² (плашка)</span><span><span class="sw" style="background:#002346;border-radius:50%"></span>Сделок, шт (точка)</span></div></section>`;
   const blockE = `
   <section class="slide">${head("dx-h-concl","Выводы по экспозиции",`Лоты ${nPt} в продаже на ${DX.asOf} и прайс БАЗА-РЖД${isAll?"":` · ${selN.join(", ")}`}`)}<ul class="dx-concl">${CC.e}</ul></section>
   <section class="tiles" aria-label="Экспозиция, итог">${kpiE}</section>
@@ -1544,6 +1560,18 @@ function renderDeals(){
   root.querySelector("#dx-nav").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const t = document.getElementById(b.dataset.t); if(t) t.closest(".slide").scrollIntoView({behavior:"smooth", block:"start"}); });
   root.querySelector("#dx-blk").addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b || b.dataset.v===blk) return; S.dblk = b.dataset.v; save(); render(); document.getElementById("deals-view").scrollIntoView({block:"start"}); window.scrollTo(0,0); });
   const mf = root.querySelector("#dx-mon-f"); if(mf) mf.addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const y = window.scrollY; S.dmon = b.dataset.v; save(); render(); window.scrollTo(0, y); });
+  { const lab = pIt.map(x=>x.s==="Городские легенды"?"Гор. легенды":x.s), ar = pIt.map(x=>x.a.area);
+    const nn = pIt.map(x=>x.own?null:x.a.n), nMax = Math.max(...nn.filter(v=>v!=null),1);
+    dxDraw("dx-c-prof", { type:"bar", plugins:[ChartDataLabels],
+      data:{ labels:lab, datasets:[
+        { data:pIt.map(x=>x.a.ppm/1000), backgroundColor:pIt.map(x=>x.own?own:"#C3C8CF"), borderRadius:3, maxBarThickness:54, order:2,
+          datalabels:{ labels:{ v:{anchor:"end", align:"end", offset:2, color:ink, font:{size:12, weight:"700"}, formatter:v=>f1(v)},
+            a:{anchor:"start", align:"end", offset:4, formatter:(_,c)=>f1(ar[c.dataIndex]), color:own, backgroundColor:"#FEF3F3", borderColor:"#F6B4B9", borderWidth:1, borderRadius:6, padding:{top:3,bottom:2,left:6,right:6}, font:{size:12, weight:"700"}} } } },
+        { type:"line", data:nn, yAxisID:"y2", showLine:false, pointRadius:6, pointHoverRadius:7, pointBackgroundColor:"#002346", pointBorderColor:"#fff", pointBorderWidth:2, order:1,
+          datalabels:{ display:c=>c.dataset.data[c.dataIndex]!=null, anchor:"center", align:"right", offset:6, formatter:v=>v+" шт", color:"#fff", backgroundColor:"#002346", borderRadius:4, padding:{top:2,bottom:1,left:4,right:4}, font:{size:11, weight:"700"}} } ] },
+      options: dxBase({ layout:{padding:{top:22}}, plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>{ const x = pIt[c.dataIndex], a = x.a; return ` ${dxK(a.ppm)} тыс. ₽/м² · ${f1(a.area)} м² · бюджет ${dxM(a.bud)} млн ₽ · ${f0(a.n)} ${x.own?"лотов в прайсе":"сд."}`; }}} },
+        scales:{ x:{grid:{display:false}, ticks:{color:ink2, font:{size:11}, maxRotation:0, autoSkip:false}}, y:{display:false, beginAtZero:true, grace:"12%"}, y2:{display:false, min:-nMax*0.5, max:nMax*1.9} } }) }); }
+  const pf2 = root.querySelector("#dx-prof-f2"); if(pf2) pf2.addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const y = window.scrollY; S.dprof = +b.dataset.v; save(); render(); window.scrollTo(0, y); });
   const pf = root.querySelector("#dx-prof-f"); if(pf) pf.addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const y = window.scrollY; S.dprof = +b.dataset.v; save(); render(); window.scrollTo(0, y); });
   const hf = root.querySelector("#dx-hist-f"); if(hf) hf.addEventListener("click", e=>{ const b = e.target.closest(".chip"); if(!b) return; const y = window.scrollY; S.dhist = b.dataset.v; save(); render(); window.scrollTo(0, y); });
 }
