@@ -31,7 +31,7 @@ async function main() {
     ? fs.readFileSync(process.argv[2], "utf8")
     : await (await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`)).text();
   const rows = parseCSV(csv);
-  const h = rows.findIndex(r => r[0] && r[0].startsWith("Порядковый номер"));
+  const h = rows.findIndex(r => r[0] && r[0].startsWith("Порядковый номер") && r.includes("Секция") && r.includes("Количество комнат"));
   if (h < 0) throw new Error("Не найдена строка заголовков листа «Прайс»");
   const H = rows[h].map(x => x.trim());
   const col = name => { const i = H.indexOf(name); if (i < 0) throw new Error("Нет столбца: " + name); return i; };
