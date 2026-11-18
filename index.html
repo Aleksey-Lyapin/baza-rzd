@@ -659,7 +659,7 @@ function render(){
   charts.splice(0).forEach(c=>c.destroy());
   const box = document.getElementById("charts");
   box.innerHTML = shown.map(a=>`<article class="card" id="c-${a.g.key.replace("|","-")}">
-      <div class="ct">${a.g.label}: цена м², бюджет и площадь<small>над столбцом — цена (тыс. ₽/м²) и бюджет (млн ₽), на столбце — средняя площадь, м²</small></div>
+      <div class="ct">${a.g.label}: цена м², бюджет и площадь<small>над столбцом — цена (тыс. ₽/м²) и бюджет (млн ₽), на столбце — средняя площадь, м² · проекты — по убыванию цены сделок</small></div>
       <div class="badges">${pill(dev(a.own.ppm,a.medE),"экспозиции")}${pill(dev(a.own.ppm,a.medD),"сделок")}</div>
       <div class="chart-scroll"><div class="chart"><canvas aria-label="График: ${a.g.label}"></canvas></div></div>
       <div class="legend"><span><span class="sw" style="background:${css("--deal")}"></span>Сделки за ${f0(DATA.period.months)} мес.</span><span><span class="sw" style="background:${css("--expo")}"></span>Экспозиция</span><span><span class="sw" style="background:${css("--own")}"></span>БАЗА-РЖД (прайс)</span>${rOut.length ? `<span style="color:var(--muted)">${rOut.length===1 ? "Не показан" : "Не показаны"}: ${rOut.join(", ")} — ${rOut.length===1 ? "не входит" : "не входят"} в выборку</span>` : ""}</div>
@@ -715,7 +715,8 @@ const medLines = { id:"medLines", afterDatasetsDraw(ch, args, o){ const {ctx, ch
 
 function drawChart(cv, a){
   const items = [{ s:"БАЗА-РЖД", own:true, e:a.own, d:{n:0,ppm:null} }, ...a.rows.filter(r=>r.m).map(r=>({s:r.s, m:r.m, e:r.e, d:r.d}))];
-  items.sort((x,y)=>((y.e.ppm??y.d.ppm??0)-(x.e.ppm??x.d.ppm??0)));
+  /* ранжирование — по цене сделок (18.11.2026); БАЗА-РЖД — по цене прайса; проекты без сделок — в конце, по экспозиции */
+  const rk = it => it.own ? it.e.ppm : it.d.ppm; items.sort((x,y)=>{ const a=rk(x), b=rk(y); if(a!=null&&b!=null) return b-a; if(a!=null) return -1; if(b!=null) return 1; return (y.e.ppm??0)-(x.e.ppm??0); });
   const wrapName = (s) => { const out=[]; let cur=""; for(const w of s.split(" ")){ if(cur && (cur+" "+w).length>13){ out.push(cur); cur=w; } else cur = cur ? cur+" "+w : w; } if(cur) out.push(cur); return out; };
   const labels = items.map(it=> it.own ? ["БАЗА-РЖД", `${it.e.n} ${lots(it.e.n)}`]
     : [...wrapName(it.s + (it.m?"":" *")), ...(it.e.n?[`${it.e.n} ${lots(it.e.n)}`]:[]), ...(it.d.n?[`${it.d.n} ${deals(it.d.n)}`]:[])]);
