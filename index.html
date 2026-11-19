@@ -669,7 +669,7 @@ function render(){
   const multiT = new Set(shown.map(a=>a.g.t)).size > 1;
   const body = shown.map((a,i)=>{ const dE=dev(a.own.ppm,a.medE), dD=dev(a.own.ppm,a.medD);
     const row = `<tr data-k="${a.g.key}"><td>${a.g.label}</td><td>${f0(a.own.n)}</td><td class="own">${f0(a.own.ppm)}</td><td>${f1(a.own.bud/1e6)}</td><td>${f1(a.own.area)}</td><td>${f0(a.medE)}</td><td class="muted">${f1(a.areaE)}</td><td class="${devCls(dE)}">${pc(dE)}</td>${isA ? "" : `<td>${f0(a.medD)}</td><td class="muted">${f1(a.areaD)}</td><td class="${devCls(dD)}">${pc(dD)}</td><td class="muted">${f0(a.dealsN)}</td>`}</tr>`;
-    const last = isA && multiT && (i===shown.length-1 || shown[i+1].g.t!==a.g.t);
+    const last = isA && multiT && (i===shown.length-1 || shown[i+1].g.t!==a.g.t) && shown.filter(x=>x.g.t===a.g.t).length > 1;
     return row + (last ? rowT("tot sub", `Итого ${TL[a.g.t]}`, total(shown.filter(x=>x.g.t===a.g.t))) : ""); }).join("");
   const tot = rowT("tot", "Итого", T);
   document.getElementById("sum").innerHTML = head + `<tbody>${body}${tot}</tbody>`;
