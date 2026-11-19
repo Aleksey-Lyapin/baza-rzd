@@ -360,6 +360,10 @@ table.dx.fix tr.dxm td:first-child{background:#EEF4FA} table.dx.fix tr.dxm.own t
       <button class="chip" data-v="corr" aria-pressed="true">С поправкой на отделку</button></span></div>
     <div class="ctl">Секции БАЗА-РЖД <span class="chips" id="f-sec" title="Можно выбрать несколько секций"></span></div>
     <div class="ctl">Конкуренты <span class="chips" id="f-comp"></span></div>
+    <div class="ctl">На графиках <span class="chips" id="f-cdata">
+      <button class="chip" data-v="all" aria-pressed="true">Сделки и экспозиция</button>
+      <button class="chip" data-v="d" aria-pressed="false">Только сделки</button>
+      <button class="chip" data-v="e" aria-pressed="false">Только экспозиция</button></span></div>
     <div class="ctl" id="c-type" hidden>Тип квартир <span class="chips" id="f-type"></span></div>
     <div class="src" id="src-note"></div>
   </section>
@@ -507,6 +511,7 @@ const TL = Object.fromEntries(TYPES);
 const P = DATA.projects;
 const S = { view:"summary", mode:"raw", type:"all", secs:[], pcat:"all", pgrp:"all", pdiff:"all", pvs:3, stool:"all" };
 try { const s = JSON.parse(localStorage.getItem("rzd-dash") || "{}"); Object.assign(S, s); } catch (e) {}
+if(!["all","d","e"].includes(S.cdata)) S.cdata = "all"; /* что показывать у конкурентов на графиках «Прайса» */
 S.mode = "raw"; /* по умолчанию везде цена по прайсу без поправок; переключатель работает в пределах сессии */
 const SECS = [...new Set(DATA.rzd.map(r=>r[4]))].sort((a,b)=>a-b);
 if(!Array.isArray(S.secs)) S.secs = [];
@@ -615,6 +620,7 @@ function render(){
   if(S.view==="deals"){ renderDeals(); return; }
   renderSecs();
   document.querySelectorAll("#f-mode .chip").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===S.mode));
+  document.querySelectorAll("#f-cdata .chip").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===S.cdata));
   const cType = document.getElementById("c-type"); cType.hidden = S.view!=="area";
   document.getElementById("f-sec").innerHTML = `<button class="chip" data-v="all" aria-pressed="${!S.secs.length}">Все</button>` +
     SECS.map(s=>`<button class="chip" data-v="${s}" aria-pressed="${S.secs.includes(s)}" title="${finishOf(s)}">С${s}</button>`).join("");
@@ -659,10 +665,10 @@ function render(){
   charts.splice(0).forEach(c=>c.destroy());
   const box = document.getElementById("charts");
   box.innerHTML = shown.map(a=>`<article class="card" id="c-${a.g.key.replace("|","-")}">
-      <div class="ct">${a.g.label}: цена м², бюджет и площадь<small>над столбцом — цена (тыс. ₽/м²) и бюджет (млн ₽), на столбце — средняя площадь, м² · проекты — по убыванию цены сделок (без сделок — по цене экспозиции)</small></div>
-      <div class="badges">${pill(dev(a.own.ppm,a.medE),"экспозиции")}${pill(dev(a.own.ppm,a.medD),"сделок")}</div>
+      <div class="ct">${a.g.label}: цена м², бюджет и площадь<small>над столбцом — цена (тыс. ₽/м²) и бюджет (млн ₽), на столбце — средняя площадь, м² · ${S.cdata==="e" ? "проекты — по убыванию цены экспозиции" : S.cdata==="d" ? "проекты со сделками — по убыванию цены сделок" : "проекты — по убыванию цены сделок (без сделок — по цене экспозиции)"}</small></div>
+      <div class="badges">${S.cdata!=="d" ? pill(dev(a.own.ppm,a.medE),"экспозиции") : ""}${S.cdata!=="e" ? pill(dev(a.own.ppm,a.medD),"сделок") : ""}</div>
       <div class="chart-scroll"><div class="chart"><canvas aria-label="График: ${a.g.label}"></canvas></div></div>
-      <div class="legend"><span><span class="sw" style="background:${css("--deal")}"></span>Сделки за ${f0(DATA.period.months)} мес.</span><span><span class="sw" style="background:${css("--expo")}"></span>Экспозиция</span><span><span class="sw" style="background:${css("--own")}"></span>БАЗА-РЖД (прайс)</span>${rOut.length ? `<span style="color:var(--muted)">${rOut.length===1 ? "Не показан" : "Не показаны"}: ${rOut.join(", ")} — ${rOut.length===1 ? "не входит" : "не входят"} в выборку</span>` : ""}</div>
+      <div class="legend">${S.cdata!=="e" ? `<span><span class="sw" style="background:${css("--deal")}"></span>Сделки за ${f0(DATA.period.months)} мес.</span>` : ""}${S.cdata!=="d" ? `<span><span class="sw" style="background:${css("--expo")}"></span>Экспозиция</span>` : ""}<span><span class="sw" style="background:${css("--own")}"></span>БАЗА-РЖД (прайс)</span>${rOut.length ? `<span style="color:var(--muted)">${rOut.length===1 ? "Не показан" : "Не показаны"}: ${rOut.join(", ")} — ${rOut.length===1 ? "не входит" : "не входят"} в выборку</span>` : ""}</div>
     </article>`).join("") || `<div class="empty">Нет групп для выбранного фильтра</div>`;
   shown.forEach((a,i)=>drawChart(box.querySelectorAll("canvas")[i], a));
   renderVs();
@@ -714,15 +720,17 @@ const medLines = { id:"medLines", afterDatasetsDraw(ch, args, o){ const {ctx, ch
     ctx.font="700 14px Inter, system-ui, sans-serif"; ctx.fillText(f0(L.v/1000)+" тыс.", x, ty+9); ctx.restore(); } } };
 
 function drawChart(cv, a){
-  const items = [{ s:"БАЗА-РЖД", own:true, e:a.own, d:{n:0,ppm:null} }, ...a.rows.filter(r=>r.m).map(r=>({s:r.s, m:r.m, e:r.e, d:r.d}))];
+  /* фильтр «На графиках» (19.11.2026): all — сделки и экспозиция, d — только сделки, e — только экспозиция; проекты без нужных данных скрываются */
+  const sD = S.cdata!=="e", sE = S.cdata!=="d";
+  const items = [{ s:"БАЗА-РЖД", own:true, e:a.own, d:{n:0,ppm:null} }, ...a.rows.filter(r=>r.m && (sD && r.d.ppm!=null || sE && r.e.ppm!=null)).map(r=>({s:r.s, m:r.m, e:r.e, d:r.d}))];
   /* ранжирование — по цене сделок (18.11.2026); БАЗА-РЖД — по цене прайса; у проекта без сделок — по цене экспозиции */
-  const rk = it => it.own ? it.e.ppm : (it.d.ppm ?? it.e.ppm ?? 0); items.sort((x,y)=>rk(y)-rk(x));
+  const rk = it => it.own ? it.e.ppm : ((sD ? it.d.ppm : null) ?? it.e.ppm ?? 0); items.sort((x,y)=>rk(y)-rk(x));
   const wrapName = (s) => { const out=[]; let cur=""; for(const w of s.split(" ")){ if(cur && (cur+" "+w).length>13){ out.push(cur); cur=w; } else cur = cur ? cur+" "+w : w; } if(cur) out.push(cur); return out; };
   const labels = items.map(it=> it.own ? ["БАЗА-РЖД", `${it.e.n} ${lots(it.e.n)}`]
-    : [...wrapName(it.s + (it.m?"":" *")), ...(it.e.n?[`${it.e.n} ${lots(it.e.n)}`]:[]), ...(it.d.n?[`${it.d.n} ${deals(it.d.n)}`]:[])]);
-  cv.parentElement.style.minWidth = Math.max(640, items.length*100) + "px";
-  const dealData = items.map(it=> it.own ? null : it.d.ppm);
-  const expoData = items.map(it=> it.e.ppm);
+    : [...wrapName(it.s + (it.m?"":" *")), ...(sE&&it.e.n?[`${it.e.n} ${lots(it.e.n)}`]:[]), ...(sD&&it.d.n?[`${it.d.n} ${deals(it.d.n)}`]:[])]);
+  cv.parentElement.style.minWidth = Math.max(640, items.length*(S.cdata==="all"?100:80)) + "px";
+  const dealData = items.map(it=> it.own || !sD ? null : it.d.ppm);
+  const expoData = items.map(it=> it.own || sE ? it.e.ppm : null);
   const meta = { d: items.map(it=>it.d), e: items.map(it=>it.e) };
   const ownCol = css("--own"), expo = css("--expo"), deal = css("--deal"), ink = css("--ink"), muted = css("--muted"), grid = css("--line");
   const lbl = (which) => ({
@@ -737,7 +745,7 @@ function drawChart(cv, a){
       { label:"Сделки", data:dealData, backgroundColor:deal, borderRadius:{topLeft:5,topRight:5}, borderSkipped:"bottom", maxBarThickness:64, categoryPercentage:.8, barPercentage:.9, datalabels:{labels:lbl("d")} },
       { label:"Экспозиция", data:expoData, backgroundColor:items.map(it=>it.own?ownCol:expo), borderRadius:{topLeft:5,topRight:5}, borderSkipped:"bottom", maxBarThickness:64, categoryPercentage:.8, barPercentage:.9, datalabels:{labels:lbl("e")} } ] },
     plugins:[ChartDataLabels],
-    options:{ responsive:true, maintainAspectRatio:false, animation:false, devicePixelRatio:Math.max(2, window.devicePixelRatio||1), layout:{padding:{top:46, right:8}},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false, skipNull:true, devicePixelRatio:Math.max(2, window.devicePixelRatio||1), layout:{padding:{top:46, right:8}},
       plugins:{ legend:{display:false},
         tooltip:{ callbacks:{ title:(t)=>items[t[0].dataIndex].s, label:(c)=>{ const m=meta[c.datasetIndex===0?"d":"e"][c.dataIndex]; return `${c.dataset.label}: ${f0(c.raw)} ₽/м² · ${f1(m.bud/1e6)} млн · ${f1(m.area)} м² · ${m.n} ${c.datasetIndex===0?deals(m.n):lots(m.n)}`; } } } },
       scales:{ x:{ grid:{display:false}, ticks:{ color:(c)=> items[c.index]&&items[c.index].own ? ownCol : css("--ink2"), font:{size:12.5, weight:"500", lineHeight:1.25}, autoSkip:false, maxRotation:0, minRotation:0, padding:6 } },
@@ -1135,6 +1143,7 @@ document.getElementById("p-vs").addEventListener("click",e=>{ const b=e.target.c
 document.getElementById("tab-price").addEventListener("click",()=>{ S.view = S.pview || "rooms"; save(); render(); });
 document.getElementById("f-view").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.view=b.dataset.v; S.pview=b.dataset.v; save(); render(); });
 document.getElementById("f-mode").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.mode=b.dataset.v; save(); render(); });
+document.getElementById("f-cdata").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(!b) return; S.cdata=b.dataset.v; save(); render(); });
 const toggleSec = v => {
   if(v==="all") S.secs = [];
   else { const s=+v; S.secs = S.secs.includes(s) ? S.secs.filter(x=>x!==s) : [...S.secs, s].sort((a,c)=>a-c); if(S.secs.length===SECS.length) S.secs = []; }
