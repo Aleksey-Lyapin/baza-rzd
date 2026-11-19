@@ -36,7 +36,7 @@ async function main() {
   const H = rows[h].map(x => x.trim());
   const col = name => { const i = H.indexOf(name); if (i < 0) throw new Error("Нет столбца: " + name); return i; };
   const cSec = col("Секция"), cRooms = col("Количество комнат"), cArea = col("Площадь с коэф 0,3/0,5"),
-        cPrice = col("Цена с макс. скидкой (цена индекса)"), cRough = col("Черновая отделка");
+        cPrice = col("Цена с макс. скидкой (цена индекса)"), cRough = col("Черновая отделка"), cStat = col("Статус");
 
   const html = fs.readFileSync(HTML, "utf8");
   const rough = +(html.match(/"rough":(\d+)/) || [])[1] || 8000; // поправка на черновую отделку, ₽/м²
@@ -47,7 +47,8 @@ async function main() {
     const sec = num(r[cSec]), area = num(r[cArea]), price = Math.round(num(r[cPrice])), rc = roomCode(r[cRooms] || "");
     if (!rc || !(sec > 0) || !(area > 0) || !(price > 0)) throw new Error(`Строка ${r[0]}: не разобраны данные (${r[cSec]}, ${r[cRooms]}, ${r[cArea]}, ${r[cPrice]})`);
     const isRough = (r[cRough] || "").trim().toLowerCase() === "да";
-    out.push([rc, area, price, isRough ? Math.round(price + rough * area) : price, sec]);
+    const free = (r[cStat] || "").trim().toLowerCase() === "свободно" ? 1 : 0; // r[5]: 1 — статус «Свободно»
+    out.push([rc, area, price, isRough ? Math.round(price + rough * area) : price, sec, free]);
   }
   if (out.length < 300) throw new Error("Слишком мало лотов: " + out.length);
 
